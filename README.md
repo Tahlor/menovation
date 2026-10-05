@@ -55,13 +55,30 @@ We are building a **standalone offline webapp (PWA)** and **cross-platform nativ
 
 ## 🚀 Quick Start
 
-### 1. Re-run Asset Collection
-Assets have been collected and verified under `assets/`. To re-fetch or verify integrity:
+### 1. Fast Asset Collection (Brand UI & Reference Taxonomy)
+Core brand assets and public catalog can be fetched via:
 ```bash
 python3 scripts/download_assets.py
 ```
 
-### 2. Launch the Offline Webapp Prototype Locally
+### 2. Rate-Limited Member Media Collection (<= 5 Assets / Hour)
+To collect member-gated workout circuit blueprints and high-res demonstration media without exceeding server load constraints:
+- Strictly enforces **no more than 5 assets per hour** (rolling 60-minute window).
+- Enforces **5–10 minutes spacing** between downloads.
+- Authenticates automatically via JWT bearer tokens and persists state in `assets/download_state.json`.
+
+```bash
+# Check queue and rate limit status
+python3 scripts/rate_limited_asset_downloader.py --status
+
+# Download a single queued asset
+python3 scripts/rate_limited_asset_downloader.py --once
+
+# Run continuous background collector with rate limits (daemon mode)
+python3 scripts/rate_limited_asset_downloader.py --daemon
+```
+
+### 3. Launch the Offline Webapp Prototype Locally
 You can run any local static file server to test the offline webapp and Service Worker:
 ```bash
 # Python 3 built-in server
