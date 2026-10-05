@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Menovation Rate-Limited Asset Downloader
+Menovation Multi-Tier Rate-Limited Asset Downloader
 Strictly enforces:
-  - No more than 5 assets per hour (rolling 60-minute window)
-  - 5-10 minutes spacing between downloads
-  - Automatic JWT token authentication and renewal
+  - Videos & Workout Details: Max 5 per hour (spaced ~10-12 minutes)
+  - Exercise GIFs & Images: Max 60 per hour (~1 per minute)
+  - Interleaved scheduling: Downloads GIFs while waiting for next video slot
+  - Automatic JWT authentication and token renewal
   - Persistent queue state in assets/download_state.json
 """
 
@@ -31,16 +32,17 @@ STATE_FILE = ASSETS_DIR / "download_state.json"
 MANIFEST_FILE = ASSETS_DIR / "manifest.json"
 LOG_FILE = ASSETS_DIR / "rate_limited_downloader.log"
 
-# Default Credentials
+# Credentials
 DEFAULT_USERNAME = os.environ.get("MVN_USERNAME", "krystaleearchibald@gmail.com")
 DEFAULT_PASSWORD = os.environ.get("MVN_PASSWORD", "qHR86ZdslA60Dy")
 
-# Rate limit defaults
-DEFAULT_MAX_PER_HOUR = 5
-DEFAULT_MIN_INTERVAL = 360  # 6 minutes
-DEFAULT_MAX_INTERVAL = 600  # 10 minutes
+# Rate Limits
+VIDEO_MAX_PER_HOUR = 5
+VIDEO_MIN_INTERVAL = 600   # 10 minutes between videos
+GIF_MAX_PER_HOUR = 60
+GIF_MIN_INTERVAL = 55      # ~1 minute between GIFs
 
-# Setup logging
+# Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -57,18 +59,11 @@ HEADERS = {
 }
 
 
-class RateLimitedDownloader:
-    def __init__(self, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD,
-                 max_per_hour=DEFAULT_MAX_PER_HOUR, min_interval=DEFAULT_MIN_INTERVAL,
-                 max_interval=DEFAULT_MAX_INTERVAL):
+class TieredRateLimitedDownloader:
+    def __init__(self, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD):
         self.username = username
         self.password = password
-        self.max_per_hour = max_per_hour
-        self.min_interval = min_interval
-        self.max_interval = max_interval
-        
         self.token = None
-        self.token_expiry = None
         
         self.state = self.load_state()
         self.ensure_queue_initialized()
@@ -77,32 +72,38 @@ class RateLimitedDownloader:
         if STATE_FILE.exists():
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    # Migrate old state format if needed
+                    if "video_history" not in data:
+                        data["video_history"] = data.get("download_history", [])
+                    if "gif_history" not in data:
+                        data["gif_history"] = []
+                    return data
             except Exception as e:
-                logger.error(f"Error loading state file: {e}")
-        
+                logger.error(f"Error loading state: {e}")
+
         return {
-            "version": 1,
+            "version": 2,
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "last_download_time": None,
-            "download_history": [],  # Timestamps of downloads in ISO format
-            "completed_assets": {},  # asset_id -> metadata
-            "failed_assets": {},     # asset_id -> error details
-            "queue": []             # ordered list of asset objects
+            "video_history": [],
+            "gif_history": [],
+            "last_video_time": None,
+            "last_gif_time": None,
+            "completed_assets": {},
+            "failed_assets": {},
+            "queue": []
         }
 
     def save_state(self):
         STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        # Prune download history to last 24 hours
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-        self.state["download_history"] = [
-            ts for ts in self.state.get("download_history", []) if ts > cutoff
-        ]
+        self.state["video_history"] = [ts for ts in self.state.get("video_history", []) if ts > cutoff]
+        self.state["gif_history"] = [ts for ts in self.state.get("gif_history", []) if ts > cutoff]
+        
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(self.state, f, indent=2)
 
     def authenticate(self) -> bool:
-        """Obtain or refresh JWT bearer token"""
         logger.info(f"Authenticating with Menovation API as {self.username}...")
         url = "https://menovation.com/wp-json/jwt-auth/v1/token"
         data = urllib.parse.urlencode({
@@ -120,9 +121,8 @@ class RateLimitedDownloader:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 res = json.loads(resp.read().decode())
                 if res.get("statusCode") == 200 or "data" in res:
-                    data_obj = res.get("data", {})
-                    self.token = data_obj.get("token")
-                    logger.info(f"Authentication successful for {data_obj.get('displayName', self.username)}.")
+                    self.token = res.get("data", {}).get("token")
+                    logger.info("Authentication successful. Bearer token active.")
                     return True
                 else:
                     logger.error(f"Authentication failed: {res}")
@@ -132,36 +132,31 @@ class RateLimitedDownloader:
             return False
 
     def ensure_queue_initialized(self):
-        """Populate the queue from exercises and workouts if queue is empty"""
         if self.state.get("queue"):
             return
 
-        logger.info("Initializing download queue from local catalog...")
+        logger.info("Initializing multi-tier queue...")
         queue = []
 
-        # 1. Member-Gated Workouts (512 workouts)
-        workouts_json = ASSETS_DIR / "data" / "programs.json"
-        all_workouts = {}
+        # 1. Member-Gated Workouts (Tier: video/workout)
         try:
             req = urllib.request.Request("https://menovation.com/wp-json/mvn-app/v1/workouts", headers=HEADERS)
             with urllib.request.urlopen(req, timeout=30) as resp:
                 all_workouts = json.loads(resp.read().decode())
+                for w_id, w_info in all_workouts.items():
+                    post_id = w_info.get("workoutPostId", w_id)
+                    queue.append({
+                        "id": f"workout_{post_id}",
+                        "tier": "video",
+                        "title": w_info.get("workoutTitle", f"Workout {post_id}"),
+                        "url": f"https://menovation.com/wp-json/mvn-app/v1/workouts/{post_id}",
+                        "dest_path": str((WORKOUTS_DIR / f"{post_id}.json").relative_to(BASE_DIR)),
+                        "requires_auth": True
+                    })
         except Exception as e:
-            logger.warning(f"Could not fetch workout list from API ({e}), falling back to local files.")
+            logger.warning(f"Could not load workouts from API: {e}")
 
-        if all_workouts:
-            for w_id, w_info in all_workouts.items():
-                post_id = w_info.get("workoutPostId", w_id)
-                queue.append({
-                    "id": f"workout_{post_id}",
-                    "type": "workout_detail",
-                    "title": w_info.get("workoutTitle", f"Workout {post_id}"),
-                    "url": f"https://menovation.com/wp-json/mvn-app/v1/workouts/{post_id}",
-                    "dest_path": str((WORKOUTS_DIR / f"{post_id}.json").relative_to(BASE_DIR)),
-                    "requires_auth": True
-                })
-
-        # 2. Exercise Demonstration GIFs
+        # 2. Exercise Demonstration GIFs (Tier: gif)
         exercises_json = ASSETS_DIR / "data" / "exercises.json"
         if exercises_json.exists():
             try:
@@ -173,7 +168,7 @@ class RateLimitedDownloader:
                             filename = gif_url.split("/")[-1].split("?")[0]
                             queue.append({
                                 "id": f"exercise_gif_{ex_id}",
-                                "type": "exercise_gif",
+                                "tier": "gif",
                                 "title": f"GIF: {ex.get('exerciseTitle', ex_id)}",
                                 "url": gif_url,
                                 "dest_path": str((MEDIA_DIR / "exercises" / "gifs" / filename).relative_to(BASE_DIR)),
@@ -182,45 +177,55 @@ class RateLimitedDownloader:
             except Exception as e:
                 logger.error(f"Error reading exercises.json: {e}")
 
-        # Filter out already completed
         completed = set(self.state.get("completed_assets", {}).keys())
         self.state["queue"] = [item for item in queue if item["id"] not in completed]
         logger.info(f"Queue populated with {len(self.state['queue'])} assets.")
         self.save_state()
 
-    def get_downloads_in_last_hour(self) -> int:
+    def get_tier_count_last_hour(self, tier: str) -> int:
         now = datetime.now(timezone.utc)
         one_hour_ago = (now - timedelta(hours=1)).isoformat()
-        recent = [ts for ts in self.state.get("download_history", []) if ts > one_hour_ago]
+        history_key = "video_history" if tier == "video" else "gif_history"
+        recent = [ts for ts in self.state.get(history_key, []) if ts > one_hour_ago]
         return len(recent)
 
-    def get_wait_time_for_rate_limit(self) -> float:
-        """Returns seconds to wait until we are under max_per_hour"""
+    def can_download_tier(self, tier: str) -> tuple[bool, float]:
+        """Returns (is_allowed, wait_seconds_needed)"""
         now = datetime.now(timezone.utc)
         one_hour_ago = (now - timedelta(hours=1)).isoformat()
-        recent = sorted([ts for ts in self.state.get("download_history", []) if ts > one_hour_ago])
+        history_key = "video_history" if tier == "video" else "gif_history"
+        last_time_key = "last_video_time" if tier == "video" else "last_gif_time"
         
-        if len(recent) < self.max_per_hour:
-            return 0.0
+        max_per_hour = VIDEO_MAX_PER_HOUR if tier == "video" else GIF_MAX_PER_HOUR
+        min_interval = VIDEO_MIN_INTERVAL if tier == "video" else GIF_MIN_INTERVAL
 
-        # Must wait until the oldest download in the window is > 1 hour old
-        oldest_dt = datetime.fromisoformat(recent[0])
-        wake_time = oldest_dt + timedelta(hours=1, seconds=5)
-        wait_seconds = (wake_time - now).total_seconds()
-        return max(0.0, wait_seconds)
+        recent = sorted([ts for ts in self.state.get(history_key, []) if ts > one_hour_ago])
 
-    def download_next_asset(self) -> bool:
-        if not self.state.get("queue"):
-            logger.info("All queued assets have been downloaded!")
-            return False
+        # Check hourly cap
+        if len(recent) >= max_per_hour:
+            oldest_dt = datetime.fromisoformat(recent[0])
+            wake_time = oldest_dt + timedelta(hours=1, seconds=3)
+            wait_hourly = max(0.0, (wake_time - now).total_seconds())
+            return False, wait_hourly
 
-        item = self.state["queue"][0]
+        # Check spacing interval from last download of this tier
+        last_time_str = self.state.get(last_time_key)
+        if last_time_str:
+            last_dt = datetime.fromisoformat(last_time_str)
+            elapsed = (now - last_dt).total_seconds()
+            if elapsed < min_interval:
+                return False, min_interval - elapsed
+
+        return True, 0.0
+
+    def download_asset(self, item: dict) -> bool:
         asset_id = item["id"]
+        tier = item.get("tier", "gif")
         url = item["url"]
         dest = BASE_DIR / item["dest_path"]
         requires_auth = item.get("requires_auth", False)
 
-        logger.info(f"Downloading [{item['type']}]: {item['title']} -> {dest.name}")
+        logger.info(f"Downloading [{tier.upper()}]: {item['title']} -> {dest.name}")
         dest.parent.mkdir(parents=True, exist_ok=True)
 
         req_headers = dict(HEADERS)
@@ -241,21 +246,28 @@ class RateLimitedDownloader:
                 sha256 = hashlib.sha256(content).hexdigest()
                 now_str = datetime.now(timezone.utc).isoformat()
 
-                # Record completion
                 self.state["completed_assets"][asset_id] = {
                     "completed_at": now_str,
+                    "tier": tier,
                     "size_bytes": size,
                     "sha256": sha256,
                     "path": item["dest_path"],
                     "url": url
                 }
-                self.state["download_history"].append(now_str)
-                self.state["last_download_time"] = now_str
-                self.state["queue"].pop(0)
+
+                history_key = "video_history" if tier == "video" else "gif_history"
+                last_time_key = "last_video_time" if tier == "video" else "last_gif_time"
+                
+                self.state[history_key].append(now_str)
+                self.state[last_time_key] = now_str
+                
+                # Remove from queue
+                self.state["queue"] = [q for q in self.state["queue"] if q["id"] != asset_id]
                 self.save_state()
 
-                logger.info(f"Successfully downloaded {dest.name} ({size:,} bytes).")
-                logger.info(f"Assets in trailing hour: {self.get_downloads_in_last_hour()}/{self.max_per_hour}")
+                v_hour = self.get_tier_count_last_hour("video")
+                g_hour = self.get_tier_count_last_hour("gif")
+                logger.info(f"OK ({size:,} bytes). Hourly Rate -> Videos: {v_hour}/{VIDEO_MAX_PER_HOUR} | GIFs: {g_hour}/{GIF_MAX_PER_HOUR}")
                 return True
 
         except urllib.error.HTTPError as e:
@@ -263,99 +275,111 @@ class RateLimitedDownloader:
                 logger.warning("Token expired (401). Refreshing token and retrying...")
                 self.token = None
                 if self.authenticate():
-                    return self.download_next_asset()
+                    return self.download_asset(item)
             logger.error(f"HTTP Error {e.code} while downloading {url}: {e}")
             self.state["failed_assets"][asset_id] = {"error": str(e), "code": e.code}
-            self.state["queue"].pop(0)
+            self.state["queue"] = [q for q in self.state["queue"] if q["id"] != asset_id]
             self.save_state()
             return False
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
             self.state["failed_assets"][asset_id] = {"error": str(e)}
-            self.state["queue"].pop(0)
+            self.state["queue"] = [q for q in self.state["queue"] if q["id"] != asset_id]
             self.save_state()
             return False
 
     def print_status(self):
-        completed_count = len(self.state.get("completed_assets", {}))
-        pending_count = len(self.state.get("queue", []))
-        failed_count = len(self.state.get("failed_assets", {}))
-        hourly_count = self.get_downloads_in_last_hour()
+        completed = len(self.state.get("completed_assets", {}))
+        pending = len(self.state.get("queue", []))
+        v_pending = sum(1 for item in self.state.get("queue", []) if item.get("tier") == "video")
+        g_pending = sum(1 for item in self.state.get("queue", []) if item.get("tier") == "gif")
         
-        print("\n" + "=" * 60)
-        print(" Menovation Rate-Limited Asset Downloader Status")
-        print("=" * 60)
-        print(f"Total Completed:       {completed_count}")
-        print(f"Total Pending Queue:   {pending_count}")
-        print(f"Total Failed:          {failed_count}")
-        print(f"Downloads Last Hour:   {hourly_count} / {self.max_per_hour} (Max)")
-        print(f"Last Download:         {self.state.get('last_download_time') or 'None'}")
+        v_hourly = self.get_tier_count_last_hour("video")
+        g_hourly = self.get_tier_count_last_hour("gif")
         
-        if pending_count > 0:
-            next_item = self.state["queue"][0]
-            print(f"Next in Queue:         [{next_item['type']}] {next_item['title']}")
-        print("=" * 60 + "\n")
+        print("\n" + "=" * 65)
+        print(" Menovation Tiered Rate-Limited Asset Downloader Status")
+        print("=" * 65)
+        print(f"Total Completed:       {completed}")
+        print(f"Total Pending Queue:   {pending} (Videos/Workouts: {v_pending} | GIFs: {g_pending})")
+        print(f"Videos Trailing Hour:  {v_hourly} / {VIDEO_MAX_PER_HOUR} (Max 5/hr, spaced >=10 min)")
+        print(f"GIFs Trailing Hour:    {g_hourly} / {GIF_MAX_PER_HOUR} (Max 60/hr, spaced >=55 sec)")
+        print(f"Last Video Download:   {self.state.get('last_video_time') or 'None'}")
+        print(f"Last GIF Download:     {self.state.get('last_gif_time') or 'None'}")
+        print("=" * 65 + "\n")
 
     def run_loop(self):
-        logger.info("Starting Rate-Limited Downloader Loop...")
-        logger.info(f"Settings: max {self.max_per_hour}/hour, interval {self.min_interval//60}-{self.max_interval//60} mins.")
+        logger.info("Starting Menovation Tiered Downloader Daemon...")
+        logger.info(f"Policy: Videos <= {VIDEO_MAX_PER_HOUR}/hr (every 10m) | GIFs <= {GIF_MAX_PER_HOUR}/hr (every 1m)")
 
         while self.state.get("queue"):
-            # Check rolling hourly limit
-            wait_for_rate_limit = self.get_wait_time_for_rate_limit()
-            if wait_for_rate_limit > 0:
-                logger.info(f"Rate limit reached ({self.max_per_hour}/hr). Sleeping {wait_for_rate_limit/60:.1f} mins until window clears...")
-                time.sleep(wait_for_rate_limit)
+            can_video, wait_video = self.can_download_tier("video")
+            can_gif, wait_gif = self.can_download_tier("gif")
 
-            # Download asset
-            success = self.download_next_asset()
+            # Check if there is an eligible video asset ready
+            video_items = [q for q in self.state["queue"] if q.get("tier") == "video"]
+            gif_items = [q for q in self.state["queue"] if q.get("tier") == "gif"]
 
-            if not self.state.get("queue"):
-                logger.info("All downloads completed!")
-                break
+            item_to_download = None
 
-            # Sleep spaced interval (5-10 minutes)
-            sleep_time = random.uniform(self.min_interval, self.max_interval)
-            logger.info(f"Sleeping {sleep_time/60:.1f} minutes before next download...")
-            time.sleep(sleep_time)
+            if video_items and can_video:
+                item_to_download = video_items[0]
+            elif gif_items and can_gif:
+                item_to_download = gif_items[0]
+            elif not video_items and gif_items and can_gif:
+                item_to_download = gif_items[0]
+            elif not gif_items and video_items and can_video:
+                item_to_download = video_items[0]
+
+            if item_to_download:
+                self.download_asset(item_to_download)
+                # Brief sleep between any network calls (2-5s)
+                time.sleep(random.uniform(2, 5))
+            else:
+                # Calculate minimum wait time
+                wait_candidates = []
+                if video_items:
+                    wait_candidates.append(wait_video)
+                if gif_items:
+                    wait_candidates.append(wait_gif)
+
+                wait_sec = min(wait_candidates) if wait_candidates else 30.0
+                wait_sec = max(5.0, wait_sec)
+                logger.info(f"Rate window active. Sleeping {wait_sec:.1f}s before next check (Videos: {wait_video:.0f}s, GIFs: {wait_gif:.0f}s)...")
+                time.sleep(wait_sec)
+
+        logger.info("All queued assets completed!")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Menovation Rate-Limited Asset Downloader")
-    parser.add_argument("--once", action="store_true", help="Download a single asset and exit")
-    parser.add_argument("--status", action="store_true", help="Show current queue and rate limit status")
+    parser = argparse.ArgumentParser(description="Menovation Tiered Rate-Limited Downloader")
+    parser.add_argument("--status", action="store_true", help="Display current queue and rate limit status")
     parser.add_argument("--daemon", action="store_true", help="Run continuously in the background")
-    parser.add_argument("--max-per-hour", type=int, default=DEFAULT_MAX_PER_HOUR, help="Max assets per hour (default: 5)")
-    parser.add_argument("--min-interval", type=int, default=DEFAULT_MIN_INTERVAL, help="Min seconds between downloads (default: 360 = 6 mins)")
-    parser.add_argument("--max-interval", type=int, default=DEFAULT_MAX_INTERVAL, help="Max seconds between downloads (default: 600 = 10 mins)")
+    parser.add_argument("--once", action="store_true", help="Download 1 asset immediately according to rate limits")
 
     args = parser.parse_args()
-
-    downloader = RateLimitedDownloader(
-        max_per_hour=args.max_per_hour,
-        min_interval=args.min_interval,
-        max_interval=args.max_interval
-    )
+    downloader = TieredRateLimitedDownloader()
 
     if args.status:
         downloader.print_status()
         return
 
     if args.once:
-        # Check rate limit before running
-        wait = downloader.get_wait_time_for_rate_limit()
-        if wait > 0:
-            print(f"Rate limit reached ({downloader.max_per_hour}/hr). Must wait {wait/60:.1f} minutes.")
-            sys.exit(1)
-        downloader.download_next_asset()
+        can_v, _ = downloader.can_download_tier("video")
+        can_g, _ = downloader.can_download_tier("gif")
+        v_items = [q for q in downloader.state["queue"] if q.get("tier") == "video"]
+        g_items = [q for q in downloader.state["queue"] if q.get("tier") == "gif"]
+
+        if v_items and can_v:
+            downloader.download_asset(v_items[0])
+        elif g_items and can_g:
+            downloader.download_asset(g_items[0])
+        else:
+            print("No asset is currently eligible due to rate limits. Run with --status to check wait times.")
         return
 
-    if args.daemon:
-        downloader.run_loop()
-    else:
-        # Default behavior: Show status and run loop
-        downloader.print_status()
-        downloader.run_loop()
+    downloader.print_status()
+    downloader.run_loop()
 
 
 if __name__ == "__main__":
