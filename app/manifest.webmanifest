@@ -1,0 +1,25 @@
+{
+  "name": "Menovation - Offline Wellness & Strength",
+  "short_name": "Menovation",
+  "description": "Perimenopause strength, wellness, and symptom tracking that works offline without an internet connection.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fffef2",
+  "theme_color": "#770053",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./assets/images/menovation-sq-purple-300.png",
+      "sizes": "300x300",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/images/menovation-sq-purple-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}

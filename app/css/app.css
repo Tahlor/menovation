@@ -1,0 +1,415 @@
+/* Menovation Offline App Stylesheet */
+
+@font-face {
+  font-family: 'Prata';
+  src: url('../assets/fonts/prata-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NunitoSans';
+  src: url('../assets/fonts/NunitoSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NunitoSans';
+  src: url('../assets/fonts/NunitoSans-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NunitoSans';
+  src: url('../assets/fonts/NunitoSans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --mvn-purple: #770053;
+  --mvn-purple-dark: #520038;
+  --mvn-purple-light: #9b1974;
+  --mvn-cream: #fffef2;
+  --mvn-light-cream: #f8f6f0;
+  --mvn-sand: #c8b7b3;
+  --mvn-light-sand: #d9cac7;
+  --mvn-dark: #231e23;
+  --mvn-very-dark: #111111;
+  --mvn-neon: #c9f277;
+  --mvn-neon-text: #1a3300;
+  --mvn-white: #ffffff;
+  --mvn-gray-100: #f4f4f4;
+  --mvn-gray-300: #e0e0e0;
+  --mvn-gray-600: #666666;
+  --mvn-shadow-sm: 0 2px 6px rgba(35, 30, 35, 0.06);
+  --mvn-shadow-md: 0 6px 16px rgba(35, 30, 35, 0.1);
+  --mvn-radius-sm: 6px;
+  --mvn-radius-md: 12px;
+  --mvn-radius-lg: 20px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'NunitoSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--mvn-cream);
+  color: var(--mvn-dark);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, .font-serif {
+  font-family: 'Prata', serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* --- App Header & Navigation --- */
+.app-header {
+  background-color: var(--mvn-purple);
+  color: var(--mvn-cream);
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--mvn-shadow-sm);
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-logo {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
+.network-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.network-status-badge.online {
+  background-color: rgba(201, 242, 119, 0.2);
+  color: var(--mvn-neon);
+  border: 1px solid var(--mvn-neon);
+}
+.network-status-badge.online .status-dot {
+  background-color: var(--mvn-neon);
+  box-shadow: 0 0 8px var(--mvn-neon);
+}
+
+.network-status-badge.offline {
+  background-color: #ffeedd;
+  color: #a74500;
+  border: 1px solid #ff9944;
+}
+.network-status-badge.offline .status-dot {
+  background-color: #e65100;
+  box-shadow: 0 0 8px #ff9944;
+}
+
+/* Offline Announcement Banner */
+.offline-banner {
+  background-color: #fff3cd;
+  color: #856404;
+  border-bottom: 1px solid #ffeeba;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.875rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.offline-banner.hidden {
+  display: none;
+}
+
+/* Main Container */
+.main-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  flex: 1;
+  width: 100%;
+}
+
+/* Auth Container (Login & Offline Unlock) */
+.auth-container {
+  max-width: 480px;
+  margin: 2rem auto;
+  background: var(--mvn-white);
+  border-radius: var(--mvn-radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--mvn-shadow-md);
+  border: 1px solid var(--mvn-light-sand);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  color: var(--mvn-purple);
+  margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+  color: var(--mvn-gray-600);
+  font-size: 0.95rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: var(--mvn-dark);
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  background-color: var(--mvn-light-cream);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--mvn-purple);
+  background-color: var(--mvn-white);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: var(--mvn-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--mvn-purple);
+  color: var(--mvn-white);
+}
+
+.btn-primary:hover {
+  background-color: var(--mvn-purple-dark);
+}
+
+.btn-secondary {
+  background-color: var(--mvn-light-sand);
+  color: var(--mvn-dark);
+}
+
+.btn-secondary:hover {
+  background-color: var(--mvn-sand);
+}
+
+.btn-neon {
+  background-color: var(--mvn-neon);
+  color: var(--mvn-neon-text);
+}
+
+.btn-neon:hover {
+  background-color: #b8e65e;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: var(--mvn-gray-600);
+  font-size: 0.85rem;
+}
+
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--mvn-gray-300);
+}
+
+.auth-divider span {
+  padding: 0 0.75rem;
+}
+
+/* Tab Navigation */
+.tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--mvn-light-sand);
+  margin-bottom: 2rem;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mvn-gray-600);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab-btn.active {
+  color: var(--mvn-purple);
+  border-bottom-color: var(--mvn-purple);
+  font-weight: 700;
+}
+
+/* Cards & Grid */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: var(--mvn-white);
+  border-radius: var(--mvn-radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--mvn-shadow-sm);
+  border: 1px solid var(--mvn-light-sand);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: var(--mvn-shadow-md);
+}
+
+.card-title {
+  font-size: 1.35rem;
+  color: var(--mvn-purple);
+  margin-bottom: 0.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-purple {
+  background-color: rgba(119, 0, 83, 0.1);
+  color: var(--mvn-purple);
+}
+
+.badge-sand {
+  background-color: var(--mvn-light-sand);
+  color: var(--mvn-dark);
+}
+
+/* Symptom Tracker */
+.symptom-slider-group {
+  margin-bottom: 1.25rem;
+}
+
+.symptom-slider-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.slider-value {
+  color: var(--mvn-purple);
+  font-weight: 700;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--mvn-purple);
+}
+
+/* Sync Outbox Table */
+.sync-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.sync-table th, .sync-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--mvn-gray-300);
+}
+
+.sync-table th {
+  background-color: var(--mvn-light-cream);
+  font-weight: 700;
+  color: var(--mvn-purple);
+}
+
+/* Footer */
+.app-footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--mvn-gray-600);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--mvn-light-sand);
+  background-color: var(--mvn-light-cream);
+}

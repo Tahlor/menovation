@@ -1,0 +1,284 @@
+{
+  "project": "Menovation Offline App & Webapp",
+  "collected_at": "2026-10-05T04:19:39.967712+00:00",
+  "base_url": "https://menovation.com",
+  "categories": [
+    "images",
+    "fonts",
+    "css",
+    "js",
+    "data"
+  ],
+  "assets": {
+    "menovation-wordmark-sand.png": {
+      "category": "images",
+      "relative_path": "assets/images/menovation-wordmark-sand.png",
+      "source_url": "https://menovation.com/wp-content/uploads/2025/08/Menovation_wordmark_lightSand_1000X300.png",
+      "description": "Primary Menovation header wordmark (Light Sand)",
+      "size_bytes": 10027,
+      "sha256": "178dec8554dca8327b64c534c28d18c0aae1f8e01a4d187cac5fbe5f898154cc",
+      "content_type": "image/png"
+    },
+    "menovation-sq-purple-512.png": {
+      "category": "images",
+      "relative_path": "assets/images/menovation-sq-purple-512.png",
+      "source_url": "https://menovation.com/wp-content/uploads/2025/02/menovation-sq-purple-512.png",
+      "description": "Menovation square purple icon (512x512)",
+      "size_bytes": 14402,
+      "sha256": "efbbd08a5710423b4fa160e04f81606a66e74e4bcaa39ea91a42082a66005998",
+      "content_type": "image/png"
+    },
+    "menovation-sq-purple-300.png": {
+      "category": "images",
+      "relative_path": "assets/images/menovation-sq-purple-300.png",
+      "source_url": "https://menovation.com/wp-content/uploads/2025/02/menovation-sq-purple-512-300x300.png",
+      "description": "Menovation square purple icon (300x300 thumbnail)",
+      "size_bytes": 6581,
+      "sha256": "3387ec05f139be0c494b5382a99beae1eac657d01e87c2b5a43ffefaaeda8158",
+      "content_type": "image/png"
+    },
+    "menovation-site-cover.webp": {
+      "category": "images",
+      "relative_path": "assets/images/menovation-site-cover.webp",
+      "source_url": "https://menovation.com/wp-content/uploads/2025/04/menovation-site-cover.webp",
+      "description": "Hero site cover background image",
+      "size_bytes": 35156,
+      "sha256": "25fdabe443e14d4dea3c79194db231bfb56a9584a7bae6b97d8cbec74ec9e63d",
+      "content_type": "image/webp"
+    },
+    "prata-latin-400-normal.woff2": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/prata-latin-400-normal.woff2",
+      "source_url": "https://menovation.com/wp-content/themes/menovation-app-theme/fonts/prata-latin-400-normal.woff2",
+      "description": "Prata font (Serif brand headline font)",
+      "size_bytes": 19224,
+      "sha256": "1b85a8c794709747c9f689b791984c430a2d9716a5cf9440d955bd7d20dad9d0",
+      "content_type": "font/woff2"
+    },
+    "NunitoSans-Bold.woff2": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/NunitoSans-Bold.woff2",
+      "source_url": "https://menovation.com/wp-content/themes/menovation-app-theme/fonts/NunitoSans-Bold.woff2",
+      "description": "NunitoSans Bold font",
+      "size_bytes": 34300,
+      "sha256": "a56ec906778610a9c6c8edf33deb199a60af3342ab212b07391d1821881b5f64",
+      "content_type": "font/woff2"
+    },
+    "NunitoSans-SemiBold.woff2": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/NunitoSans-SemiBold.woff2",
+      "source_url": "https://menovation.com/wp-content/themes/menovation-app-theme/fonts/NunitoSans-SemiBold.woff2",
+      "description": "NunitoSans SemiBold font",
+      "size_bytes": 33876,
+      "sha256": "67cb1ca88487cb110c592d976f92f0c0502cbdacd0da940f70dbb8b37bc0e4d4",
+      "content_type": "font/woff2"
+    },
+    "NunitoSans-Regular.woff2": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/NunitoSans-Regular.woff2",
+      "source_url": "https://menovation.com/wp-content/themes/menovation-app-theme/fonts/NunitoSans-Regular.woff2",
+      "description": "NunitoSans Regular body font",
+      "size_bytes": 33816,
+      "sha256": "497e79c6bdf446cfa56a9cf3d90d72d68ebb052732763f362d46bf05b4c93849",
+      "content_type": "font/woff2"
+    },
+    "NunitoSans-Light.woff2": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/NunitoSans-Light.woff2",
+      "source_url": "https://menovation.com/wp-content/themes/menovation-app-theme/fonts/NunitoSans-Light.woff2",
+      "description": "NunitoSans Light font",
+      "size_bytes": 33620,
+      "sha256": "d329b500e047bf84ddade8c9f6e0ff8ed69810200ebc94bbd95dc9fe0fc55687",
+      "content_type": "font/woff2"
+    },
+    "dashicons.woff2": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/dashicons.woff2",
+      "source_url": "https://menovation.com/wp-includes/fonts/dashicons.woff2",
+      "description": "WordPress Dashicons font (Woff2)",
+      "size_bytes": 26132,
+      "sha256": "c225536c9abcc922dc1223b1457a307b0545d9fc8a3963d5ac56851c9c54c6b2",
+      "content_type": "font/woff2"
+    },
+    "dashicons.woff": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/dashicons.woff",
+      "source_url": "https://menovation.com/wp-includes/fonts/dashicons.woff",
+      "description": "WordPress Dashicons font (Woff fallback)",
+      "size_bytes": 26124,
+      "sha256": "20fabfa803d080cde34001dc0371473d089cb619e20ea2e1d99c16832af9ed1f",
+      "content_type": "font/woff"
+    },
+    "dashicons.ttf": {
+      "category": "fonts",
+      "relative_path": "assets/fonts/dashicons.ttf",
+      "source_url": "https://menovation.com/wp-includes/fonts/dashicons.ttf",
+      "description": "WordPress Dashicons font (TTF fallback)",
+      "size_bytes": 56392,
+      "sha256": "cacd900a2587c234c53e9d0108fc51ff6c61420c4f89a1731014b673a7b9a1a8",
+      "content_type": "application/octet-stream"
+    },
+    "dashicons.min.css": {
+      "category": "css",
+      "relative_path": "assets/css/dashicons.min.css",
+      "source_url": "https://menovation.com/wp-includes/css/dashicons.min.css",
+      "description": "Dashicons UI stylesheet",
+      "size_bytes": 59004,
+      "sha256": "26a7e7b9d4bb9948771c126085b99fba6546af4399e6263e8a69a3e33f6271cb",
+      "content_type": "text/css"
+    },
+    "underscore.min.js": {
+      "category": "js",
+      "relative_path": "assets/js/underscore.min.js",
+      "source_url": "https://menovation.com/wp-includes/js/underscore.min.js",
+      "description": "Underscore.js utility library",
+      "size_bytes": 19012,
+      "sha256": "61ccb2ff314af4b300014f1715b9e9b29f6aede9f25151e00722d5a4455c0ff2",
+      "content_type": "application/javascript"
+    },
+    "wp-hooks.min.js": {
+      "category": "js",
+      "relative_path": "assets/js/wp-hooks.min.js",
+      "source_url": "https://menovation.com/wp-includes/js/dist/hooks.min.js",
+      "description": "WordPress hooks/event system",
+      "size_bytes": 5050,
+      "sha256": "cce388fed1a82ebd20ce7d9601e4b6c83a425ea201c333d71b1183ee887cc090",
+      "content_type": "application/javascript"
+    },
+    "wp-i18n.min.js": {
+      "category": "js",
+      "relative_path": "assets/js/wp-i18n.min.js",
+      "source_url": "https://menovation.com/wp-includes/js/dist/i18n.min.js",
+      "description": "WordPress internationalization library",
+      "size_bytes": 5732,
+      "sha256": "558ae0ec83cc88de0929fde86b87c231246aafa9c961ebffb3257b05f62ca5cf",
+      "content_type": "application/javascript"
+    },
+    "flickity.pkgd.min.js": {
+      "category": "js",
+      "relative_path": "assets/js/flickity.pkgd.min.js",
+      "source_url": "https://menovation.com/wp-content/themes/menovation-app-theme/js/packages/flickity.pkgd.min.js",
+      "description": "Flickity touch carousel package",
+      "size_bytes": 57709,
+      "sha256": "bc32e039e3d23f4f8ce3835ebe9bcde6655a4249eee0a397421bbac9895332c0",
+      "content_type": "application/javascript"
+    },
+    "autoptimize_single_login.js": {
+      "category": "js",
+      "relative_path": "assets/js/autoptimize_single_login.js",
+      "source_url": "https://menovation.com/wp-content/cache/autoptimize/js/autoptimize_single_2c872dbe60f4ba70fb85356113d8b35e.js",
+      "description": "Login page client bundle",
+      "size_bytes": 87532,
+      "sha256": "3e7501d15c3630e791c8b20392eb9dee31a9f65ce3efdde76cef5c710141ab24",
+      "content_type": "application/javascript"
+    },
+    "mepr_general.js": {
+      "category": "js",
+      "relative_path": "assets/js/mepr_general.js",
+      "source_url": "https://menovation.com/wp-content/cache/autoptimize/js/autoptimize_single_04b4ba3e07a5c5147c1a2877714ebba8.js",
+      "description": "MemberPress general client script",
+      "size_bytes": 1079,
+      "sha256": "796c9122104d2d1506c3659884b01b5c6911178af1a6db85535cd69087afee31",
+      "content_type": "application/javascript"
+    },
+    "health-check.json": {
+      "category": "data",
+      "relative_path": "assets/data/health-check.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/health-check",
+      "description": "App build version and health status",
+      "size_bytes": 54,
+      "sha256": "01c8452e4a6d9a2bb20271edd2804a3e1701ed697d1bb941e13ac7fae7439a8a",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "programs.json": {
+      "category": "data",
+      "relative_path": "assets/data/programs.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/programs",
+      "description": "Workout programs catalogue",
+      "size_bytes": 97278,
+      "sha256": "6706231efb49c855e6a7886ef2aea7554a6bc2fc8155890092e9bd3c747c8ceb",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "core-basics.json": {
+      "category": "data",
+      "relative_path": "assets/data/core-basics.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/core-basics",
+      "description": "Core Basics foundational routine data",
+      "size_bytes": 9293,
+      "sha256": "711b27177fe0c2e7132e897cb4bda7e383a18d757586f7c149d8c1d88f0da173",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "exercises.json": {
+      "category": "data",
+      "relative_path": "assets/data/exercises.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/exercises",
+      "description": "Complete exercise library dictionary",
+      "size_bytes": 1174631,
+      "sha256": "cac87718b39fb6c98e30b273a19bdd79d8ccb1a38ab18922b5a5c67ae0ff101c",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "contributors.json": {
+      "category": "data",
+      "relative_path": "assets/data/contributors.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/contributors",
+      "description": "Educators and fitness instructors roster",
+      "size_bytes": 29509,
+      "sha256": "38683135de85a01296cd58ee5fd68e2a041939b43c4a490f2119ac26ca53a55b",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "nutrition-lessons.json": {
+      "category": "data",
+      "relative_path": "assets/data/nutrition-lessons.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/nutrition-lessons",
+      "description": "Perimenopause nutrition lessons catalog",
+      "size_bytes": 13531,
+      "sha256": "d1af017cf504054788903e42c94e206092b786a8111065ff76eb3d27ee0b819c",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "health-articles.json": {
+      "category": "data",
+      "relative_path": "assets/data/health-articles.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/health-articles",
+      "description": "Women's wellness and menopause health articles",
+      "size_bytes": 135492,
+      "sha256": "d3bb5636c633ce8e04db2802d6153e4ed0fb893331a2f86c8c52f7122bb0cbd8",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "supplements.json": {
+      "category": "data",
+      "relative_path": "assets/data/supplements.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/supplements",
+      "description": "Menopause supplement guide",
+      "size_bytes": 3141,
+      "sha256": "80d3a7f836da9eee431baed4b11ae1dc0329fcc32382689550043c836ebbb7e3",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "fitness-quiz.json": {
+      "category": "data",
+      "relative_path": "assets/data/fitness-quiz.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/fitness-quiz",
+      "description": "Fitness assessment questionnaire structure",
+      "size_bytes": 2956,
+      "sha256": "c15ef10121dec3af748c201904e8f17c097de2ba3a145ca16c77d4435801eebe",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "stage-quiz.json": {
+      "category": "data",
+      "relative_path": "assets/data/stage-quiz.json",
+      "source_url": "https://menovation.com/wp-json/mvn-app/v1/stage-quiz",
+      "description": "Menopause stage assessment quiz structure",
+      "size_bytes": 14252,
+      "sha256": "4dda4cf3c5330882ec509d438e1398c0fdf3e83043c2013f6598986347c7edf8",
+      "content_type": "application/json; charset=UTF-8"
+    },
+    "menovation-login.css": {
+      "category": "css",
+      "relative_path": "assets/css/menovation-login.css",
+      "source_url": "https://menovation.com/login/ (Inline CSS bundle)",
+      "description": "Menovation app theme and MemberPress login layout stylesheet",
+      "size_bytes": 41793,
+      "sha256": "402d651a159d8ed917578ebad04d3fce18d737c2cd083db1210c51fab0b31a3d",
+      "content_type": "text/css"
+    }
+  }
+}
