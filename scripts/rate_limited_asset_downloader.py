@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Menovation Multi-Tier Rate-Limited Asset Downloader
-Strictly enforces:
-  - Videos & Workout Details: Max 5 per hour (spaced ~10-12 minutes)
-  - Exercise GIFs & Images: Max 60 per hour (~1 per minute)
-  - Interleaved scheduling: Downloads GIFs while waiting for next video slot
-  - Automatic JWT authentication and token renewal
-  - Persistent queue state in assets/download_state.json
+Menovation Multi-Tier Organic Rate-Limited Asset Downloader
+Features:
+  - Videos & Workouts: Max 10 per hour (2x previous limit, min 1 min spacing)
+  - Exercise GIFs: Max 120 per hour (2x previous limit, min 5 sec spacing)
+  - Organic human-like pacing: Small realistic bursts (2-4 items spaced 5-15s)
+    interleaved with short pauses, avoiding spiky hourly bursts or rigid clockwork intervals.
+  - Strict rolling 60-minute window limits.
+  - Automatic JWT authentication and token renewal.
+  - Persistent queue state in assets/download_state.json.
 """
 
 import os
@@ -36,13 +38,15 @@ LOG_FILE = ASSETS_DIR / "rate_limited_downloader.log"
 DEFAULT_USERNAME = os.environ.get("MVN_USERNAME", "krystaleearchibald@gmail.com")
 DEFAULT_PASSWORD = os.environ.get("MVN_PASSWORD", "qHR86ZdslA60Dy")
 
-# Rate Limits
-VIDEO_MAX_PER_HOUR = 5
-VIDEO_MIN_INTERVAL = 600   # 10 minutes between videos
-GIF_MAX_PER_HOUR = 60
-GIF_MIN_INTERVAL = 55      # ~1 minute between GIFs
+# 2x Hourly Rate Limits
+VIDEO_MAX_PER_HOUR = 10   # 10 workouts/videos per rolling 60 min
+GIF_MAX_PER_HOUR = 120    # 120 exercise GIFs per rolling 60 min
 
-# Logging
+# Minimum spacing between downloads of the same tier
+VIDEO_MIN_SPACING = 60    # 1 minute minimum
+GIF_MIN_SPACING = 5       # 5 seconds minimum
+
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -59,7 +63,7 @@ HEADERS = {
 }
 
 
-class TieredRateLimitedDownloader:
+class OrganicRateLimitedDownloader:
     def __init__(self, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD):
         self.username = username
         self.password = password
@@ -73,17 +77,16 @@ class TieredRateLimitedDownloader:
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    # Migrate old state format if needed
                     if "video_history" not in data:
-                        data["video_history"] = data.get("download_history", [])
+                        data["video_history"] = []
                     if "gif_history" not in data:
                         data["gif_history"] = []
                     return data
             except Exception as e:
-                logger.error(f"Error loading state: {e}")
+                logger.error(f"Error reading state: {e}")
 
         return {
-            "version": 2,
+            "version": 3,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "video_history": [],
             "gif_history": [],
@@ -138,7 +141,7 @@ class TieredRateLimitedDownloader:
         logger.info("Initializing multi-tier queue...")
         queue = []
 
-        # 1. Member-Gated Workouts (Tier: video/workout)
+        # 1. Workouts (tier: video)
         try:
             req = urllib.request.Request("https://menovation.com/wp-json/mvn-app/v1/workouts", headers=HEADERS)
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -156,7 +159,7 @@ class TieredRateLimitedDownloader:
         except Exception as e:
             logger.warning(f"Could not load workouts from API: {e}")
 
-        # 2. Exercise Demonstration GIFs (Tier: gif)
+        # 2. Exercise GIFs (tier: gif)
         exercises_json = ASSETS_DIR / "data" / "exercises.json"
         if exercises_json.exists():
             try:
@@ -179,7 +182,7 @@ class TieredRateLimitedDownloader:
 
         completed = set(self.state.get("completed_assets", {}).keys())
         self.state["queue"] = [item for item in queue if item["id"] not in completed]
-        logger.info(f"Queue populated with {len(self.state['queue'])} assets.")
+        logger.info(f"Queue initialized with {len(self.state['queue'])} items.")
         self.save_state()
 
     def get_tier_count_last_hour(self, tier: str) -> int:
@@ -190,31 +193,37 @@ class TieredRateLimitedDownloader:
         return len(recent)
 
     def can_download_tier(self, tier: str) -> tuple[bool, float]:
-        """Returns (is_allowed, wait_seconds_needed)"""
+        """
+        Returns (is_allowed, seconds_to_wait).
+        Strictly enforces rolling 60-min window and minimum interval.
+        """
         now = datetime.now(timezone.utc)
         one_hour_ago = (now - timedelta(hours=1)).isoformat()
-        history_key = "video_history" if tier == "video" else "gif_history"
-        last_time_key = "last_video_time" if tier == "video" else "last_gif_time"
         
-        max_per_hour = VIDEO_MAX_PER_HOUR if tier == "video" else GIF_MAX_PER_HOUR
-        min_interval = VIDEO_MIN_INTERVAL if tier == "video" else GIF_MIN_INTERVAL
+        is_video = (tier == "video")
+        history_key = "video_history" if is_video else "gif_history"
+        last_time_key = "last_video_time" if is_video else "last_gif_time"
+        
+        max_per_hour = VIDEO_MAX_PER_HOUR if is_video else GIF_MAX_PER_HOUR
+        min_spacing = VIDEO_MIN_SPACING if is_video else GIF_MIN_SPACING
 
         recent = sorted([ts for ts in self.state.get(history_key, []) if ts > one_hour_ago])
 
-        # Check hourly cap
+        # 1. Hard cap check in trailing 60 minutes
         if len(recent) >= max_per_hour:
             oldest_dt = datetime.fromisoformat(recent[0])
-            wake_time = oldest_dt + timedelta(hours=1, seconds=3)
-            wait_hourly = max(0.0, (wake_time - now).total_seconds())
-            return False, wait_hourly
+            # Add small random jitter (3-12s) to prevent clock-synchronized burst peaks
+            wake_time = oldest_dt + timedelta(hours=1, seconds=random.uniform(3, 12))
+            wait_seconds = max(1.0, (wake_time - now).total_seconds())
+            return False, wait_seconds
 
-        # Check spacing interval from last download of this tier
+        # 2. Minimum spacing from previous download of this tier
         last_time_str = self.state.get(last_time_key)
         if last_time_str:
             last_dt = datetime.fromisoformat(last_time_str)
             elapsed = (now - last_dt).total_seconds()
-            if elapsed < min_interval:
-                return False, min_interval - elapsed
+            if elapsed < min_spacing:
+                return False, min_spacing - elapsed
 
         return True, 0.0
 
@@ -260,14 +269,12 @@ class TieredRateLimitedDownloader:
                 
                 self.state[history_key].append(now_str)
                 self.state[last_time_key] = now_str
-                
-                # Remove from queue
                 self.state["queue"] = [q for q in self.state["queue"] if q["id"] != asset_id]
                 self.save_state()
 
                 v_hour = self.get_tier_count_last_hour("video")
                 g_hour = self.get_tier_count_last_hour("gif")
-                logger.info(f"OK ({size:,} bytes). Hourly Rate -> Videos: {v_hour}/{VIDEO_MAX_PER_HOUR} | GIFs: {g_hour}/{GIF_MAX_PER_HOUR}")
+                logger.info(f"OK ({size:,} bytes). Trailing Hour -> Videos: {v_hour}/{VIDEO_MAX_PER_HOUR} | GIFs: {g_hour}/{GIF_MAX_PER_HOUR}")
                 return True
 
         except urllib.error.HTTPError as e:
@@ -298,67 +305,85 @@ class TieredRateLimitedDownloader:
         g_hourly = self.get_tier_count_last_hour("gif")
         
         print("\n" + "=" * 65)
-        print(" Menovation Tiered Rate-Limited Asset Downloader Status")
+        print(" Menovation Organic Rate-Limited Asset Downloader Status")
         print("=" * 65)
         print(f"Total Completed:       {completed}")
-        print(f"Total Pending Queue:   {pending} (Videos/Workouts: {v_pending} | GIFs: {g_pending})")
-        print(f"Videos Trailing Hour:  {v_hourly} / {VIDEO_MAX_PER_HOUR} (Max 5/hr, spaced >=10 min)")
-        print(f"GIFs Trailing Hour:    {g_hourly} / {GIF_MAX_PER_HOUR} (Max 60/hr, spaced >=55 sec)")
+        print(f"Total Pending Queue:   {pending} (Videos: {v_pending} | GIFs: {g_pending})")
+        print(f"Videos Trailing Hour:  {v_hourly} / {VIDEO_MAX_PER_HOUR} (Max 10/hr, min 1m spacing)")
+        print(f"GIFs Trailing Hour:    {g_hourly} / {GIF_MAX_PER_HOUR} (Max 120/hr, min 5s spacing)")
         print(f"Last Video Download:   {self.state.get('last_video_time') or 'None'}")
         print(f"Last GIF Download:     {self.state.get('last_gif_time') or 'None'}")
         print("=" * 65 + "\n")
 
     def run_loop(self):
-        logger.info("Starting Menovation Tiered Downloader Daemon...")
-        logger.info(f"Policy: Videos <= {VIDEO_MAX_PER_HOUR}/hr (every 10m) | GIFs <= {GIF_MAX_PER_HOUR}/hr (every 1m)")
+        logger.info("Starting Menovation Organic Downloader Daemon...")
+        logger.info(f"Target Limits: Videos <= {VIDEO_MAX_PER_HOUR}/hr (min 60s) | GIFs <= {GIF_MAX_PER_HOUR}/hr (min 5s)")
+
+        consecutive_gifs = 0
 
         while self.state.get("queue"):
             can_video, wait_video = self.can_download_tier("video")
             can_gif, wait_gif = self.can_download_tier("gif")
 
-            # Check if there is an eligible video asset ready
             video_items = [q for q in self.state["queue"] if q.get("tier") == "video"]
             gif_items = [q for q in self.state["queue"] if q.get("tier") == "gif"]
 
             item_to_download = None
 
+            # Video priority: if video is eligible, download video
             if video_items and can_video:
                 item_to_download = video_items[0]
+                consecutive_gifs = 0
+            # Otherwise, download GIF if eligible
             elif gif_items and can_gif:
                 item_to_download = gif_items[0]
-            elif not video_items and gif_items and can_gif:
-                item_to_download = gif_items[0]
-            elif not gif_items and video_items and can_video:
-                item_to_download = video_items[0]
+                consecutive_gifs += 1
 
             if item_to_download:
                 self.download_asset(item_to_download)
-                # Brief sleep between any network calls (2-5s)
-                time.sleep(random.uniform(2, 5))
+
+                tier = item_to_download.get("tier")
+                if tier == "video":
+                    # After video, short natural pause (60 - 90 seconds)
+                    sleep_sec = random.uniform(60, 95)
+                    logger.info(f"Pacing: Post-video pause for {sleep_sec:.1f}s...")
+                    time.sleep(sleep_sec)
+                else:
+                    # Organic pacing for GIFs:
+                    # Every 2-4 consecutive GIFs, take a slightly longer breath (15-35s)
+                    # otherwise a short 5-15s spacing.
+                    if consecutive_gifs >= random.randint(2, 4):
+                        sleep_sec = random.uniform(18, 38)
+                        consecutive_gifs = 0
+                        logger.info(f"Pacing: Organic breath pause ({sleep_sec:.1f}s)...")
+                    else:
+                        sleep_sec = random.uniform(5, 14)
+                    time.sleep(sleep_sec)
+
             else:
-                # Calculate minimum wait time
+                # Neither is ready; calculate shortest wait needed
                 wait_candidates = []
                 if video_items:
                     wait_candidates.append(wait_video)
                 if gif_items:
                     wait_candidates.append(wait_gif)
 
-                wait_sec = min(wait_candidates) if wait_candidates else 30.0
-                wait_sec = max(5.0, wait_sec)
-                logger.info(f"Rate window active. Sleeping {wait_sec:.1f}s before next check (Videos: {wait_video:.0f}s, GIFs: {wait_gif:.0f}s)...")
+                wait_sec = min(wait_candidates) if wait_candidates else 15.0
+                wait_sec = max(3.0, wait_sec)
+                logger.info(f"Rate window cooling. Sleeping {wait_sec:.1f}s (Videos: {wait_video:.0f}s, GIFs: {wait_gif:.0f}s)...")
                 time.sleep(wait_sec)
 
-        logger.info("All queued assets completed!")
+        logger.info("All queued assets completed successfully!")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Menovation Tiered Rate-Limited Downloader")
-    parser.add_argument("--status", action="store_true", help="Display current queue and rate limit status")
+    parser = argparse.ArgumentParser(description="Menovation Organic Rate-Limited Downloader")
+    parser.add_argument("--status", action="store_true", help="Display queue and rate limit status")
     parser.add_argument("--daemon", action="store_true", help="Run continuously in the background")
-    parser.add_argument("--once", action="store_true", help="Download 1 asset immediately according to rate limits")
+    parser.add_argument("--once", action="store_true", help="Download 1 asset immediately if eligible")
 
     args = parser.parse_args()
-    downloader = TieredRateLimitedDownloader()
+    downloader = OrganicRateLimitedDownloader()
 
     if args.status:
         downloader.print_status()
@@ -375,7 +400,7 @@ def main():
         elif g_items and can_g:
             downloader.download_asset(g_items[0])
         else:
-            print("No asset is currently eligible due to rate limits. Run with --status to check wait times.")
+            print("No asset is currently eligible due to rate limits. Run with --status.")
         return
 
     downloader.print_status()

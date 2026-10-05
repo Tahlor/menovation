@@ -29,19 +29,90 @@
       "sha256": "4cd9c48959317e9c72775dac6f025f5819f88684fa996f142e5e4976ba8cfaee",
       "path": "assets/media/exercises/gifs/exercise-1005.gif",
       "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1005.gif"
+    },
+    "exercise_gif_1493": {
+      "completed_at": "2026-10-05T04:36:20.289351+00:00",
+      "tier": "gif",
+      "size_bytes": 595744,
+      "sha256": "fc28a12c320910c5ebc9152268ecc7bea93244b455ba717c204aff2935f7fab2",
+      "path": "assets/media/exercises/gifs/exercise-1006.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1006.gif"
+    },
+    "exercise_gif_1566": {
+      "completed_at": "2026-10-05T04:37:15.504423+00:00",
+      "tier": "gif",
+      "size_bytes": 1264684,
+      "sha256": "eda968ccfb5639dbd4935b82f1a74d380d7ecf93d54e1f041fec835ce1c759e5",
+      "path": "assets/media/exercises/gifs/exercise-1007.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1007.gif"
+    },
+    "exercise_gif_1567": {
+      "completed_at": "2026-10-05T04:38:10.675365+00:00",
+      "tier": "gif",
+      "size_bytes": 661207,
+      "sha256": "96bcd009fb4510cd655078aba2f61992c408b70456d2c005e271c53b081a5f56",
+      "path": "assets/media/exercises/gifs/exercise-1696.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1696.gif"
+    },
+    "exercise_gif_1711": {
+      "completed_at": "2026-10-05T04:39:05.952709+00:00",
+      "tier": "gif",
+      "size_bytes": 1657354,
+      "sha256": "5302a9b5c83a8aefe5cfa7f8e2347f488e804cb4967a7ef53a5521610e6db129",
+      "path": "assets/media/exercises/gifs/exercise-1009.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1009.gif"
+    },
+    "exercise_gif_1712": {
+      "completed_at": "2026-10-05T04:40:01.259108+00:00",
+      "tier": "gif",
+      "size_bytes": 416609,
+      "sha256": "b460c6033eb50c02700169b7a3e1c860ba0b94927d5e5a84d6bbe3853d68fd25",
+      "path": "assets/media/exercises/gifs/exercise-1010.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1010.gif"
+    },
+    "exercise_gif_1713": {
+      "completed_at": "2026-10-05T04:40:56.500944+00:00",
+      "tier": "gif",
+      "size_bytes": 1598928,
+      "sha256": "71f12b16ab21c643aeffdca2877d4cd6941a8565672ebcd7e758c70e9c4c9e8d",
+      "path": "assets/media/exercises/gifs/exercise-1011.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1011.gif"
+    },
+    "exercise_gif_1714": {
+      "completed_at": "2026-10-05T04:41:51.719587+00:00",
+      "tier": "gif",
+      "size_bytes": 1049775,
+      "sha256": "c314ce893257bf96431da8eeed2fc4011d91d58cb718871993e5881ff55ce151",
+      "path": "assets/media/exercises/gifs/exercise-1012.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1012.gif"
+    },
+    "exercise_gif_1715": {
+      "completed_at": "2026-10-05T04:42:47.138054+00:00",
+      "tier": "gif",
+      "size_bytes": 1107935,
+      "sha256": "26e7d5dda56d5e6cd71ad3d586c7b529bb8ac446fecd90b667a98f4d1e6d2c5a",
+      "path": "assets/media/exercises/gifs/exercise-1013.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1013.gif"
+    },
+    "workout_791": {
+      "completed_at": "2026-10-05T04:43:55.600492+00:00",
+      "tier": "video",
+      "size_bytes": 3517,
+      "sha256": "fa627b55cd890c4dac798b899fe9f5133714cbdce060e0fb82507d248dacf5ef",
+      "path": "assets/workouts/791.json",
+      "url": "https://menovation.com/wp-json/mvn-app/v1/workouts/791"
+    },
+    "exercise_gif_1716": {
+      "completed_at": "2026-10-05T04:43:59.695829+00:00",
+      "tier": "gif",
+      "size_bytes": 1741696,
+      "sha256": "a008ee03d70bc397c9fdd69528878eb905cd3e24256484192ccde95c6e1f279f",
+      "path": "assets/media/exercises/gifs/exercise-1014.gif",
+      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1014.gif"
     }
   },
   "failed_assets": {},
   "queue": [
-    {
-      "id": "workout_791",
-      "type": "workout_detail",
-      "title": "Sweat, Smile, Repeat",
-      "url": "https://menovation.com/wp-json/mvn-app/v1/workouts/791",
-      "dest_path": "assets/workouts/791.json",
-      "requires_auth": true,
-      "tier": "video"
-    },
     {
       "id": "workout_804",
       "type": "workout_detail",
@@ -4622,87 +4693,6 @@
       "dest_path": "assets/workouts/6384.json",
       "requires_auth": true,
       "tier": "video"
-    },
-    {
-      "id": "exercise_gif_1493",
-      "type": "exercise_gif",
-      "title": "GIF: Kettlebell Swing",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1006.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1006.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1566",
-      "type": "exercise_gif",
-      "title": "GIF: Back & Side Step with Band",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1007.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1007.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1567",
-      "type": "exercise_gif",
-      "title": "GIF: Ski Jump Kettlebell Swings",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1696.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1696.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1711",
-      "type": "exercise_gif",
-      "title": "GIF: Back Stepping Lunge with Weights",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1009.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1009.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1712",
-      "type": "exercise_gif",
-      "title": "GIF: Bouncing Baby",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1010.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1010.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1713",
-      "type": "exercise_gif",
-      "title": "GIF: Front & Lateral Raises",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1011.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1011.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1714",
-      "type": "exercise_gif",
-      "title": "GIF: Seated Band Row",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1012.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1012.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1715",
-      "type": "exercise_gif",
-      "title": "GIF: Kneeling Band Pull Apart",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1013.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1013.gif",
-      "requires_auth": false,
-      "tier": "gif"
-    },
-    {
-      "id": "exercise_gif_1716",
-      "type": "exercise_gif",
-      "title": "GIF: 4-Step Pallof Press",
-      "url": "https://menovationapp.wpenginepowered.com/wp-content/themes/menovation-app-theme/assets/exercises/gifs/exercise-1014.gif",
-      "dest_path": "assets/media/exercises/gifs/exercise-1014.gif",
-      "requires_auth": false,
-      "tier": "gif"
     },
     {
       "id": "exercise_gif_1717",
@@ -14823,11 +14813,21 @@
   ],
   "video_history": [
     "2026-10-05T04:27:51.107261+00:00",
-    "2026-10-05T04:35:19.070692+00:00"
+    "2026-10-05T04:35:19.070692+00:00",
+    "2026-10-05T04:43:55.600492+00:00"
   ],
   "gif_history": [
-    "2026-10-05T04:35:25.058380+00:00"
+    "2026-10-05T04:35:25.058380+00:00",
+    "2026-10-05T04:36:20.289351+00:00",
+    "2026-10-05T04:37:15.504423+00:00",
+    "2026-10-05T04:38:10.675365+00:00",
+    "2026-10-05T04:39:05.952709+00:00",
+    "2026-10-05T04:40:01.259108+00:00",
+    "2026-10-05T04:40:56.500944+00:00",
+    "2026-10-05T04:41:51.719587+00:00",
+    "2026-10-05T04:42:47.138054+00:00",
+    "2026-10-05T04:43:59.695829+00:00"
   ],
-  "last_video_time": "2026-10-05T04:35:19.070692+00:00",
-  "last_gif_time": "2026-10-05T04:35:25.058380+00:00"
+  "last_video_time": "2026-10-05T04:43:55.600492+00:00",
+  "last_gif_time": "2026-10-05T04:43:59.695829+00:00"
 }
