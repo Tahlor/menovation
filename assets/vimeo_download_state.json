@@ -2,61 +2,66 @@
   "version": 1,
   "created_at": "2026-10-06T04:23:36.173795+00:00",
   "download_history": [
-    "2026-10-06T04:25:35.350091+00:00"
+    "2026-10-06T04:25:35.350091+00:00",
+    "2026-10-06T04:32:19.762063+00:00",
+    "2026-10-06T04:46:21.474312+00:00",
+    "2026-10-06T04:54:46.498659+00:00",
+    "2026-10-06T05:02:58.429648+00:00",
+    "2026-10-06T05:10:34.017080+00:00"
   ],
-  "last_download_time": "2026-10-06T04:25:35.350091+00:00",
+  "last_download_time": "2026-10-06T05:10:34.017080+00:00",
   "completed_videos": {
     "789": {
       "title": "Strong Every Day",
       "category": "Strength",
-      "file_path": "assets/videos/789_Strong_Every_Day.mp4",
+      "file_path": "J:/Media/Videos/TV/Menovation/789_Strong_Every_Day.mp4",
       "size_bytes": 455153742,
       "downloaded_at": "2026-10-06T04:25:35.350091+00:00",
       "vimeo_stream_url": "https://player.vimeo.com/external/1091099982.m3u8?s=151256b3411887ff383d4ae25f5d69a77bc71a30&oauth2_token_id=1653515544"
+    },
+    "791": {
+      "title": "Sweat, Smile, Repeat",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/791_Sweat_Smile_Repeat.mp4",
+      "size_bytes": 445770638,
+      "downloaded_at": "2026-10-06T04:32:19.762063+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091098600.m3u8?s=6cec62434c82fd1d30233202bae6b894f865e781&oauth2_token_id=1653515544"
+    },
+    "804": {
+      "title": "Crushing Goals",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/804_Crushing_Goals.mp4",
+      "size_bytes": 483197948,
+      "downloaded_at": "2026-10-06T04:46:21.474312+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091093854.m3u8?s=3d8c38a3e27e10cdff3dd4b483c91c98bc118662&oauth2_token_id=1653515544"
+    },
+    "805": {
+      "title": "Power Surge",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/805_Power_Surge.mp4",
+      "size_bytes": 455764034,
+      "downloaded_at": "2026-10-06T04:54:46.498659+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091101288.m3u8?s=d88e9a798bf1fd111b185aa57e142a59528ba6d1&oauth2_token_id=1653515544"
+    },
+    "807": {
+      "title": "Strong Legs Ahead",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/807_Strong_Legs_Ahead.mp4",
+      "size_bytes": 461771054,
+      "downloaded_at": "2026-10-06T05:02:58.429648+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091069607.m3u8?s=30bac3b7b39445b8caa2079cecd34d8b2488d3f2&oauth2_token_id=1653515544"
+    },
+    "808": {
+      "title": "Leg Day Your Way",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/808_Leg_Day_Your_Way.mp4",
+      "size_bytes": 472450306,
+      "downloaded_at": "2026-10-06T05:10:34.017080+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091077564.m3u8?s=52b6f505c68ccb7791f5ef8ab509bd78fd9603ed&oauth2_token_id=1653515544"
     }
   },
   "failed_videos": {},
   "queue": [
-    {
-      "id": "791",
-      "workout_id": 791,
-      "title": "Sweat, Smile, Repeat",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 21
-    },
-    {
-      "id": "804",
-      "workout_id": 804,
-      "title": "Crushing Goals",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 23
-    },
-    {
-      "id": "805",
-      "workout_id": 805,
-      "title": "Power Surge",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 22
-    },
-    {
-      "id": "807",
-      "workout_id": 807,
-      "title": "Strong Legs Ahead",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 23
-    },
-    {
-      "id": "808",
-      "workout_id": 808,
-      "title": "Leg Day Your Way",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 24
-    },
     {
       "id": "809",
       "workout_id": 809,

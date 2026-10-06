@@ -27,7 +27,10 @@ from datetime import datetime, timezone, timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "assets"
 WORKOUTS_DIR = ASSETS_DIR / "workouts"
-VIDEOS_DIR = ASSETS_DIR / "videos"
+# Primary Video Storage Directory (J:/Media/Videos/TV/Menovation/)
+J_DRIVE_VIDEOS = Path("/mnt/j/Media/Videos/TV/Menovation")
+LOCAL_VIDEOS = BASE_DIR / "assets" / "videos"
+VIDEOS_DIR = J_DRIVE_VIDEOS if J_DRIVE_VIDEOS.parent.exists() else LOCAL_VIDEOS
 STATE_FILE = ASSETS_DIR / "vimeo_download_state.json"
 LOG_FILE = ASSETS_DIR / "vimeo_downloader.log"
 
