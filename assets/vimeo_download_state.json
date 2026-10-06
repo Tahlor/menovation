@@ -8,9 +8,15 @@
     "2026-10-06T04:54:46.498659+00:00",
     "2026-10-06T05:02:58.429648+00:00",
     "2026-10-06T05:10:34.017080+00:00",
-    "2026-10-06T05:30:38.885402+00:00"
+    "2026-10-06T05:30:38.885402+00:00",
+    "2026-10-06T05:37:24.902656+00:00",
+    "2026-10-06T06:01:37.782536+00:00",
+    "2026-10-06T06:08:59.949199+00:00",
+    "2026-10-06T06:17:11.719015+00:00",
+    "2026-10-06T06:25:48.227960+00:00",
+    "2026-10-06T16:07:11.786771+00:00"
   ],
-  "last_download_time": "2026-10-06T05:30:38.885402+00:00",
+  "last_download_time": "2026-10-06T16:07:11.786771+00:00",
   "completed_videos": {
     "789": {
       "title": "Strong Every Day",
@@ -76,14 +82,68 @@
       "quality": "720p",
       "downloaded_at": "2026-10-06T05:30:38.885402+00:00",
       "vimeo_stream_url": "https://player.vimeo.com/external/1091085475.m3u8?s=2dee262517c2f241cb158cc6424eb3bad30ecfe0&oauth2_token_id=1653515544"
+    },
+    "811": {
+      "title": "Thighs Before Guys",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/811_Thighs_Before_Guys.mp4",
+      "size_bytes": 219382729,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T05:37:24.902656+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091081633.m3u8?s=e041b2173875af0d4e1dfac5dc07579a729422c5&oauth2_token_id=1653515544"
+    },
+    "814": {
+      "title": "Push Strong, Pull Stronger",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/814_Push_Strong_Pull_Stronger.mp4",
+      "size_bytes": 123256231,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T06:01:37.782536+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091096858.m3u8?s=ae7acaac00c3240bca950ab2a9136233e5180655&oauth2_token_id=1653515544"
+    },
+    "815": {
+      "title": "Upper Body Strength Surge",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/815_Upper_Body_Strength_Surge.mp4",
+      "size_bytes": 235472545,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T06:08:59.949199+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091860021.m3u8?s=2fc802d2678e24922fca08d4a9d7b27b502066f2&oauth2_token_id=1653515544"
+    },
+    "816": {
+      "title": "Upper Body Vibes",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/816_Upper_Body_Vibes.mp4",
+      "size_bytes": 132549537,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T06:17:11.719015+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091092254.m3u8?s=d47332026bf3bc270ccfccd5583a08c8943106d9&oauth2_token_id=1653515544"
+    },
+    "817": {
+      "title": "Power Through Your Arms",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/817_Power_Through_Your_Arms.mp4",
+      "size_bytes": 203953621,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T06:25:48.227960+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091089094.m3u8?s=7bf0ab073e38af46fba2faaa97be7769b09ad648&oauth2_token_id=1653515544"
+    },
+    "821": {
+      "title": "Flexin' Into Your Best Life",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/821_Flexin_Into_Your_Best_Life.mp4",
+      "size_bytes": 198261924,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T16:07:11.786771+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091079491.m3u8?s=8c4b284b60910a4e417e84c79650e96f2f76a8ee&oauth2_token_id=1653515544"
     }
   },
   "failed_videos": {},
   "queue": [
     {
-      "id": "811",
-      "workout_id": 811,
-      "title": "Thighs Before Guys",
+      "id": "813",
+      "workout_id": 813,
+      "title": "I'm Flexy and I Know It",
       "program_id": 782,
       "category": "Strength",
       "duration_min": 24
@@ -95,54 +155,6 @@
       "program_id": 782,
       "category": "Strength",
       "duration_min": 23
-    },
-    {
-      "id": "813",
-      "workout_id": 813,
-      "title": "I'm Flexy and I Know It",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 24
-    },
-    {
-      "id": "814",
-      "workout_id": 814,
-      "title": "Push Strong, Pull Stronger",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 21
-    },
-    {
-      "id": "815",
-      "workout_id": 815,
-      "title": "Upper Body Strength Surge",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 22
-    },
-    {
-      "id": "816",
-      "workout_id": 816,
-      "title": "Upper Body Vibes",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 22
-    },
-    {
-      "id": "817",
-      "workout_id": 817,
-      "title": "Power Through Your Arms",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 25
-    },
-    {
-      "id": "821",
-      "workout_id": 821,
-      "title": "Flexin' Into Your Best Life",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 24
     },
     {
       "id": "824",

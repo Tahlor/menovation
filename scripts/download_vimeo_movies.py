@@ -94,11 +94,11 @@ def get_720p_program_arg(master_url: str) -> list[str]:
                 program_idx += 1
 
         if found_idx is not None:
-            return ["-map", f"0:p:{found_idx}"]
+            return ["-map", f"0:p:{found_idx}?"]
     except Exception as e:
         logger.warning(f"Could not parse 720p stream index ({e}), falling back to default mapping")
 
-    return ["-map", "0:p:0"]
+    return ["-map", "0:p:0?"]
 
 
 class VimeoMovieDownloader:
@@ -323,6 +323,7 @@ class VimeoMovieDownloader:
             "-y",
             "-hide_banner",
             "-loglevel", "warning",
+            "-sn",
             "-i", stream_url,
             *map_args,
             "-c", "copy",
