@@ -7,9 +7,10 @@
     "2026-10-06T04:46:21.474312+00:00",
     "2026-10-06T04:54:46.498659+00:00",
     "2026-10-06T05:02:58.429648+00:00",
-    "2026-10-06T05:10:34.017080+00:00"
+    "2026-10-06T05:10:34.017080+00:00",
+    "2026-10-06T05:30:38.885402+00:00"
   ],
-  "last_download_time": "2026-10-06T05:10:34.017080+00:00",
+  "last_download_time": "2026-10-06T05:30:38.885402+00:00",
   "completed_videos": {
     "789": {
       "title": "Strong Every Day",
@@ -58,26 +59,27 @@
       "size_bytes": 472450306,
       "downloaded_at": "2026-10-06T05:10:34.017080+00:00",
       "vimeo_stream_url": "https://player.vimeo.com/external/1091077564.m3u8?s=52b6f505c68ccb7791f5ef8ab509bd78fd9603ed&oauth2_token_id=1653515544"
+    },
+    "809": {
+      "title": "Unstoppable Legs",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/809_Unstoppable_Legs.mp4",
+      "size_bytes": 456023968,
+      "downloaded_at": "2026-10-06T05:27:39Z",
+      "quality": "1080p"
+    },
+    "810": {
+      "title": "The Peach Project",
+      "category": "Strength",
+      "file_path": "J:/Media/Videos/TV/Menovation/810_The_Peach_Project.mp4",
+      "size_bytes": 191403148,
+      "quality": "720p",
+      "downloaded_at": "2026-10-06T05:30:38.885402+00:00",
+      "vimeo_stream_url": "https://player.vimeo.com/external/1091085475.m3u8?s=2dee262517c2f241cb158cc6424eb3bad30ecfe0&oauth2_token_id=1653515544"
     }
   },
   "failed_videos": {},
   "queue": [
-    {
-      "id": "809",
-      "workout_id": 809,
-      "title": "Unstoppable Legs",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 22
-    },
-    {
-      "id": "810",
-      "workout_id": 810,
-      "title": "The Peach Project",
-      "program_id": 782,
-      "category": "Strength",
-      "duration_min": 23
-    },
     {
       "id": "811",
       "workout_id": 811,

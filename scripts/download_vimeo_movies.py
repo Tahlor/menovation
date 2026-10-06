@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Menovation Vimeo 1080p Movie Downloader
-Downloads actual full-length 1080p MP4 workout movies from authenticated Vimeo HLS streams.
+Menovation Vimeo Movie Downloader (720p Optimized)
+Downloads full-length 720p MP4 workout movies from authenticated Vimeo HLS streams.
+Target Directory: J:/Media/Videos/TV/Menovation/
 Prioritizes:
   1. Strength Training programs (StrongHER, Embody Strength, PowHERful, Glute Builder, Power Builder)
   2. Followed by remaining workout classes.
@@ -27,10 +28,12 @@ from datetime import datetime, timezone, timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "assets"
 WORKOUTS_DIR = ASSETS_DIR / "workouts"
+
 # Primary Video Storage Directory (J:/Media/Videos/TV/Menovation/)
 J_DRIVE_VIDEOS = Path("/mnt/j/Media/Videos/TV/Menovation")
 LOCAL_VIDEOS = BASE_DIR / "assets" / "videos"
 VIDEOS_DIR = J_DRIVE_VIDEOS if J_DRIVE_VIDEOS.parent.exists() else LOCAL_VIDEOS
+
 STATE_FILE = ASSETS_DIR / "vimeo_download_state.json"
 LOG_FILE = ASSETS_DIR / "vimeo_downloader.log"
 
@@ -70,10 +73,39 @@ def sanitize_filename(name: str) -> str:
     return clean.replace(" ", "_")[:60]
 
 
+def get_720p_program_arg(master_url: str) -> list[str]:
+    """
+    Parses Vimeo HLS master playlist to find program index for 720p (1280x720).
+    Returns ffmpeg mapping args (e.g. ['-map', '0:p:4']).
+    Falls back to closest resolution if 720p is absent.
+    """
+    try:
+        req = urllib.request.Request(master_url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            content = resp.read().decode('utf-8', errors='ignore')
+
+        program_idx = 0
+        found_idx = None
+        for line in content.split('\n'):
+            if line.startswith('#EXT-X-STREAM-INF:'):
+                if 'x720' in line or 'RESOLUTION=1280x720' in line:
+                    found_idx = program_idx
+                    break
+                program_idx += 1
+
+        if found_idx is not None:
+            return ["-map", f"0:p:{found_idx}"]
+    except Exception as e:
+        logger.warning(f"Could not parse 720p stream index ({e}), falling back to default mapping")
+
+    return ["-map", "0:p:0"]
+
+
 class VimeoMovieDownloader:
-    def __init__(self, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD):
+    def __init__(self, username=DEFAULT_USERNAME, password=DEFAULT_PASSWORD, target_resolution="720p"):
         self.username = username
         self.password = password
+        self.target_resolution = target_resolution
         self.token = None
         
         VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
@@ -91,9 +123,9 @@ class VimeoMovieDownloader:
         return {
             "version": 1,
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "download_history": [],  # Timestamps of downloads in ISO format
+            "download_history": [],
             "last_download_time": None,
-            "completed_videos": {},  # workout_id -> info
+            "completed_videos": {},
             "failed_videos": {},
             "queue": []
         }
@@ -142,7 +174,6 @@ class VimeoMovieDownloader:
         logger.info("Building prioritized video queue (Strength Training first)...")
         all_workouts = {}
 
-        # 1. Fetch full catalog list
         try:
             req = urllib.request.Request("https://menovation.com/wp-json/mvn-app/v1/workouts", headers=HEADERS)
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -150,7 +181,6 @@ class VimeoMovieDownloader:
         except Exception as e:
             logger.warning(f"Could not load workouts from API ({e}), scanning local workouts dir...")
 
-        # If API failed, load from local workouts dir
         if not all_workouts:
             for p in WORKOUTS_DIR.glob("*.json"):
                 try:
@@ -163,7 +193,6 @@ class VimeoMovieDownloader:
 
         strength_queue = []
         other_queue = []
-
         completed_ids = set(self.state.get("completed_videos", {}).keys())
 
         for w_id, w_info in all_workouts.items():
@@ -193,7 +222,6 @@ class VimeoMovieDownloader:
             else:
                 other_queue.append(item)
 
-        # Strength workouts first, then others
         self.state["queue"] = strength_queue + other_queue
         logger.info(f"Video queue initialized: {len(strength_queue)} Strength workouts, {len(other_queue)} other workouts (Total: {len(self.state['queue'])})")
         self.save_state()
@@ -227,8 +255,6 @@ class VimeoMovieDownloader:
         return True, 0.0
 
     def get_vimeo_stream_url(self, workout_id: int) -> str | None:
-        """Finds or fetches the Vimeo .m3u8 stream URL for this workout"""
-        # 1. Check local JSON
         json_path = WORKOUTS_DIR / f"{workout_id}.json"
         if json_path.exists():
             try:
@@ -244,7 +270,6 @@ class VimeoMovieDownloader:
             except Exception as e:
                 logger.warning(f"Error reading local {json_path}: {e}")
 
-        # 2. Fetch live with JWT token
         if not self.token:
             if not self.authenticate():
                 return None
@@ -255,7 +280,6 @@ class VimeoMovieDownloader:
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 w = json.loads(resp.read().decode())
-                # Save locally for future reference
                 json_path.write_text(json.dumps(w, indent=2))
                 stream_url = w.get("workoutVideoStreamUrl")
                 if not stream_url:
@@ -276,7 +300,7 @@ class VimeoMovieDownloader:
         dest_path = VIDEOS_DIR / out_filename
         tmp_path = VIDEOS_DIR / f"{wid}_{safe_title}.tmp.mp4"
 
-        logger.info(f"Preparing [{category.upper()}]: #{wid} - {title}...")
+        logger.info(f"Preparing [{category.upper()}]: #{wid} - {title} ({self.target_resolution})...")
 
         stream_url = self.get_vimeo_stream_url(wid)
         if not stream_url:
@@ -286,16 +310,21 @@ class VimeoMovieDownloader:
             self.save_state()
             return False
 
-        logger.info(f"Downloading 1080p MP4 from Vimeo stream for: {title}...")
+        logger.info(f"Downloading {self.target_resolution} MP4 from Vimeo for: {title}...")
 
-        # FFmpeg command: select 1080p (Program 0), copy streams without re-encoding
+        # Determine stream mapping
+        if self.target_resolution == "720p":
+            map_args = get_720p_program_arg(stream_url)
+        else:
+            map_args = ["-map", "0:p:0"]
+
         cmd = [
             "/usr/bin/ffmpeg",
             "-y",
             "-hide_banner",
             "-loglevel", "warning",
             "-i", stream_url,
-            "-map", "0:p:0",
+            *map_args,
             "-c", "copy",
             "-bsf:a", "aac_adtstoasc",
             str(tmp_path)
@@ -319,20 +348,25 @@ class VimeoMovieDownloader:
                     tmp_path.unlink()
                 return False
 
-            # Rename to final filename
             tmp_path.rename(dest_path)
             size_bytes = dest_path.stat().st_size
             elapsed = time.time() - t0
             now_str = datetime.now(timezone.utc).isoformat()
 
-            logger.info(f"SUCCESS: #{wid} {title} -> {out_filename} ({size_bytes / (1024*1024):.1f} MB in {elapsed:.1f}s)")
+            logger.info(f"SUCCESS: #{wid} {title} -> {out_filename} ({size_bytes / (1024*1024):.1f} MB in {elapsed:.1f}s at {self.target_resolution})")
 
-            # Record completion
+            # Store clean user-facing path
+            if dest_path.is_relative_to(BASE_DIR):
+                saved_path = str(dest_path.relative_to(BASE_DIR))
+            else:
+                saved_path = f"J:/Media/Videos/TV/Menovation/{out_filename}"
+
             self.state["completed_videos"][str(wid)] = {
                 "title": title,
                 "category": category,
-                "file_path": str(dest_path.relative_to(BASE_DIR)),
+                "file_path": saved_path,
                 "size_bytes": size_bytes,
+                "quality": self.target_resolution,
                 "downloaded_at": now_str,
                 "vimeo_stream_url": stream_url
             }
@@ -362,14 +396,15 @@ class VimeoMovieDownloader:
         strength_pending = sum(1 for q in self.state.get("queue", []) if q.get("category") == "Strength")
         hourly = self.get_downloads_last_hour()
 
-        # Calculate total video size on disk
         total_size = sum(
             f.stat().st_size for f in VIDEOS_DIR.glob("*.mp4") if f.exists()
         )
 
         print("\n" + "=" * 65)
-        print(" Menovation Vimeo 1080p Movie Downloader Status")
+        print(f" Menovation Vimeo {self.target_resolution.upper()} Movie Downloader Status")
         print("=" * 65)
+        print(f"Target Directory:         {VIDEOS_DIR}")
+        print(f"Resolution Quality:       {self.target_resolution.upper()}")
         print(f"Total Movies Completed:   {completed} ({total_size / (1024*1024*1024):.2f} GB on disk)")
         print(f"Total Pending Queue:      {pending} (Strength: {strength_pending} | Other: {pending - strength_pending})")
         print(f"Failed / Inaccessible:    {failed}")
@@ -381,8 +416,8 @@ class VimeoMovieDownloader:
         print("=" * 65 + "\n")
 
     def run_loop(self):
-        logger.info("Starting Vimeo Movie Downloader Daemon...")
-        logger.info(f"Target: Max {MAX_VIDEOS_PER_HOUR} videos/hr (1080p Full HD) | Priority: Strength Training")
+        logger.info(f"Starting Vimeo Movie Downloader Daemon ({self.target_resolution})...")
+        logger.info(f"Target: Max {MAX_VIDEOS_PER_HOUR} videos/hr | Priority: Strength Training | Target Dir: {VIDEOS_DIR}")
 
         while self.state.get("queue"):
             can_dl, wait_sec = self.can_download()
@@ -395,7 +430,6 @@ class VimeoMovieDownloader:
                     logger.info("All workout movies downloaded!")
                     break
 
-                # Paced post-download pause (5 - 8 minutes)
                 sleep_sec = random.uniform(MIN_SPACING_SECONDS, MAX_SPACING_SECONDS)
                 logger.info(f"Pacing: Sleeping {sleep_sec / 60:.1f} minutes before next movie...")
                 time.sleep(sleep_sec)
@@ -407,13 +441,14 @@ class VimeoMovieDownloader:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Menovation Vimeo 1080p Movie Downloader")
+    parser = argparse.ArgumentParser(description="Menovation Vimeo Movie Downloader")
     parser.add_argument("--status", action="store_true", help="Show current movie queue and status")
     parser.add_argument("--daemon", action="store_true", help="Run continuously in background")
     parser.add_argument("--once", action="store_true", help="Download 1 movie immediately and exit")
+    parser.add_argument("--resolution", default="720p", choices=["720p", "1080p"], help="Target video resolution (default: 720p)")
 
     args = parser.parse_args()
-    downloader = VimeoMovieDownloader()
+    downloader = VimeoMovieDownloader(target_resolution=args.resolution)
 
     if args.status:
         downloader.print_status()
