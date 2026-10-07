@@ -21,6 +21,7 @@ import argparse
 import subprocess
 import urllib.request
 import urllib.parse
+import urllib.error
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -287,27 +288,68 @@ class VimeoMovieDownloader:
                         stream_url = c.get("circuitVideoStreamUrl")
                         if stream_url: break
                 return stream_url
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                logger.warning(f"Auth error ({e}). Re-authenticating token...")
+                self.token = None
+                if self.authenticate():
+                    try:
+                        req2 = urllib.request.Request(url, headers={**HEADERS, "Authorization": f"Bearer {self.token}"})
+                        with urllib.request.urlopen(req2, timeout=30) as resp2:
+                            w = json.loads(resp2.read().decode())
+                            json_path.write_text(json.dumps(w, indent=2))
+                            stream_url = w.get("workoutVideoStreamUrl")
+                            if not stream_url:
+                                for c in w.get("workoutCircuits", []):
+                                    stream_url = c.get("circuitVideoStreamUrl")
+                                    if stream_url: break
+                            return stream_url
+                    except Exception as retry_err:
+                        logger.error(f"Re-auth retry failed for workout {workout_id}: {retry_err}")
+            logger.error(f"Failed to fetch workout {workout_id} details from API: {e}")
+            return None
         except Exception as e:
             logger.error(f"Failed to fetch workout {workout_id} details from API: {e}")
             return None
+
+    def _handle_download_failure(self, item: dict, error_msg: str):
+        wid = item["workout_id"]
+        title = item["title"]
+        retries = item.get("retry_count", 0) + 1
+        item["retry_count"] = retries
+
+        if retries >= 3:
+            logger.error(f"Workout #{wid} ({title}) failed {retries} times. Moving to failed_videos.")
+            self.state["failed_videos"][str(wid)] = {
+                "title": title,
+                "error": error_msg,
+                "retries": retries,
+                "failed_at": datetime.now(timezone.utc).isoformat()
+            }
+            self.state["queue"] = [q for q in self.state["queue"] if q["id"] != str(wid)]
+        else:
+            logger.warning(f"Workout #{wid} attempt {retries}/3 failed ({error_msg}). Will retry after backoff.")
+
+        self.save_state()
 
     def download_video(self, item: dict) -> bool:
         wid = item["workout_id"]
         title = item["title"]
         category = item.get("category", "Workout")
+        retries = item.get("retry_count", 0)
         safe_title = sanitize_filename(title)
         out_filename = f"{wid}_{safe_title}.mp4"
         dest_path = VIDEOS_DIR / out_filename
         tmp_path = VIDEOS_DIR / f"{wid}_{safe_title}.tmp.mp4"
 
-        logger.info(f"Preparing [{category.upper()}]: #{wid} - {title} ({self.target_resolution})...")
+        attempt_str = f" [Attempt {retries + 1}/3]" if retries > 0 else ""
+        logger.info(f"Preparing [{category.upper()}]: #{wid} - {title} ({self.target_resolution}){attempt_str}...")
 
         stream_url = self.get_vimeo_stream_url(wid)
         if not stream_url:
-            logger.error(f"No Vimeo stream URL found for workout #{wid}. Skipping.")
-            self.state["failed_videos"][str(wid)] = {"title": title, "error": "No stream URL"}
-            self.state["queue"] = [q for q in self.state["queue"] if q["id"] != str(wid)]
-            self.save_state()
+            err_msg = f"No Vimeo stream URL found for workout #{wid}"
+            logger.error(err_msg)
+            self._handle_download_failure(item, err_msg)
             return False
 
         logger.info(f"Downloading {self.target_resolution} MP4 from Vimeo for: {title}...")
@@ -335,18 +377,19 @@ class VimeoMovieDownloader:
         try:
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
             if res.returncode != 0:
-                logger.error(f"FFmpeg failed (code {res.returncode}): {res.stderr[:300]}")
+                err_msg = f"FFmpeg failed (code {res.returncode}): {res.stderr[:200]}"
+                logger.error(err_msg)
                 if tmp_path.exists():
                     tmp_path.unlink()
-                self.state["failed_videos"][str(wid)] = {"title": title, "error": res.stderr}
-                self.state["queue"] = [q for q in self.state["queue"] if q["id"] != str(wid)]
-                self.save_state()
+                self._handle_download_failure(item, err_msg)
                 return False
 
             if not tmp_path.exists() or tmp_path.stat().st_size < 100_000:
-                logger.error("Output file missing or empty after download.")
+                err_msg = "Output file missing or smaller than 100KB after download"
+                logger.error(err_msg)
                 if tmp_path.exists():
                     tmp_path.unlink()
+                self._handle_download_failure(item, err_msg)
                 return False
 
             tmp_path.rename(dest_path)
@@ -380,14 +423,18 @@ class VimeoMovieDownloader:
             return True
 
         except subprocess.TimeoutExpired:
-            logger.error(f"Download timed out for #{wid} {title}")
+            err_msg = f"Download timed out after 900s for #{wid} {title}"
+            logger.error(err_msg)
             if tmp_path.exists():
                 tmp_path.unlink()
+            self._handle_download_failure(item, err_msg)
             return False
         except Exception as e:
-            logger.error(f"Unexpected error downloading #{wid}: {e}")
+            err_msg = f"Unexpected error downloading #{wid}: {e}"
+            logger.error(err_msg)
             if tmp_path.exists():
                 tmp_path.unlink()
+            self._handle_download_failure(item, err_msg)
             return False
 
     def print_status(self):
@@ -413,27 +460,46 @@ class VimeoMovieDownloader:
         print(f"Last Movie Downloaded:    {self.state.get('last_download_time') or 'None'}")
         if self.state.get("queue"):
             next_w = self.state["queue"][0]
-            print(f"Next in Queue:            [{next_w.get('category')}] #{next_w['workout_id']} - {next_w['title']}")
+            retries = next_w.get("retry_count", 0)
+            retry_note = f" (Attempt {retries + 1}/3)" if retries > 0 else ""
+            print(f"Next in Queue:            [{next_w.get('category')}] #{next_w['workout_id']} - {next_w['title']}{retry_note}")
         print("=" * 65 + "\n")
 
     def run_loop(self):
         logger.info(f"Starting Vimeo Movie Downloader Daemon ({self.target_resolution})...")
         logger.info(f"Target: Max {MAX_VIDEOS_PER_HOUR} videos/hr | Priority: Strength Training | Target Dir: {VIDEOS_DIR}")
 
+        consecutive_errors = 0
+        BASE_BACKOFF = 60       # 1 minute base backoff
+        MAX_BACKOFF = 1800     # 30 minutes max backoff
+        BACKOFF_FACTOR = 2
+
         while self.state.get("queue"):
             can_dl, wait_sec = self.can_download()
 
             if can_dl:
                 next_item = self.state["queue"][0]
-                self.download_video(next_item)
+                success = self.download_video(next_item)
 
-                if not self.state.get("queue"):
-                    logger.info("All workout movies downloaded!")
-                    break
+                if success:
+                    consecutive_errors = 0
+                    if not self.state.get("queue"):
+                        logger.info("All workout movies downloaded!")
+                        break
 
-                sleep_sec = random.uniform(MIN_SPACING_SECONDS, MAX_SPACING_SECONDS)
-                logger.info(f"Pacing: Sleeping {sleep_sec / 60:.1f} minutes before next movie...")
-                time.sleep(sleep_sec)
+                    sleep_sec = random.uniform(MIN_SPACING_SECONDS, MAX_SPACING_SECONDS)
+                    logger.info(f"Pacing: Sleeping {sleep_sec / 60:.1f} minutes before next movie...")
+                    time.sleep(sleep_sec)
+                else:
+                    consecutive_errors += 1
+                    raw_backoff = min(MAX_BACKOFF, BASE_BACKOFF * (BACKOFF_FACTOR ** (consecutive_errors - 1)))
+                    # Jitter between 80% and 120% of calculated backoff
+                    jittered_backoff = raw_backoff * random.uniform(0.8, 1.2)
+                    logger.warning(
+                        f"Download failed (consecutive failure #{consecutive_errors}). "
+                        f"Exponential backoff: sleeping {jittered_backoff / 60:.1f} min ({jittered_backoff:.0f}s)..."
+                    )
+                    time.sleep(jittered_backoff)
             else:
                 logger.info(f"Rate window active. Sleeping {wait_sec / 60:.1f} minutes ({wait_sec:.0f}s)...")
                 time.sleep(max(10.0, wait_sec))
