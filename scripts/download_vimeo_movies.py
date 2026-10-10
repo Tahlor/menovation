@@ -169,7 +169,7 @@ class VimeoMovieDownloader:
             return False
 
     def ensure_queue_initialized(self):
-        if self.state.get("queue"):
+        if self.state.get("queue_initialized", False):
             return
 
         logger.info("Building prioritized video queue (Strength Training first)...")
@@ -195,10 +195,11 @@ class VimeoMovieDownloader:
         strength_queue = []
         other_queue = []
         completed_ids = set(self.state.get("completed_videos", {}).keys())
+        failed_ids = set(self.state.get("failed_videos", {}).keys())
 
         for w_id, w_info in all_workouts.items():
             post_id = int(w_info.get("workoutPostId", w_id))
-            if str(post_id) in completed_ids:
+            if str(post_id) in completed_ids or str(post_id) in failed_ids:
                 continue
 
             title = w_info.get("workoutTitle", f"Workout_{post_id}")
@@ -224,6 +225,7 @@ class VimeoMovieDownloader:
                 other_queue.append(item)
 
         self.state["queue"] = strength_queue + other_queue
+        self.state["queue_initialized"] = True
         logger.info(f"Video queue initialized: {len(strength_queue)} Strength workouts, {len(other_queue)} other workouts (Total: {len(self.state['queue'])})")
         self.save_state()
 
