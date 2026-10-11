@@ -19,13 +19,7 @@ const STATIC_PRECACHE_URLS = [
   './assets/fonts/prata-latin-400-normal.woff2',
   './assets/fonts/NunitoSans-Regular.woff2',
   './assets/fonts/NunitoSans-SemiBold.woff2',
-  './assets/fonts/NunitoSans-Bold.woff2',
-  './assets/data/programs.json',
-  './assets/data/workouts_index.json',
-  './assets/data/core-basics.json',
-  './assets/data/health-articles.json',
-  './assets/data/nutrition-lessons.json',
-  './assets/data/exercises.json'
+  './assets/fonts/NunitoSans-Bold.woff2'
 ];
 
 self.addEventListener('install', (event) => {
@@ -50,7 +44,7 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
   );
 });
 

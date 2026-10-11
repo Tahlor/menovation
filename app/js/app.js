@@ -148,13 +148,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     else showView('viewWorkouts');
   });
 
+  // Resilient JSON fetch with exponential backoff
+  async function fetchWithRetry(url, maxRetries = 4, baseDelayMs = 400) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.json();
+      } catch (err) {
+        if (attempt === maxRetries - 1) throw err;
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        await new Promise(res => setTimeout(res, delay));
+      }
+    }
+  }
+
   // --- 2. DATA FETCHING ---
   async function loadInitialData() {
     try {
       const [programsResp, workoutsResp, exercisesResp] = await Promise.all([
-        fetch('assets/data/programs.json').then(r => r.json()),
-        fetch('assets/data/workouts_index.json').then(r => r.json()),
-        fetch('assets/data/exercises.json').then(r => r.json()).catch(() => ({}))
+        fetchWithRetry('assets/data/programs.json'),
+        fetchWithRetry('assets/data/workouts_index.json'),
+        fetchWithRetry('assets/data/exercises.json').catch(() => ({}))
       ]);
 
       programsData = programsResp;
@@ -325,11 +340,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 5. WORKOUT PLAYER VIEW ---
   async function openWorkoutPlayer(workoutId) {
-    currentWorkout = workoutsIndex[String(workoutId)];
+    console.log('[DEBUG] openWorkoutPlayer called with workoutId:', workoutId);
+    currentWorkout = workoutsIndex ? workoutsIndex[String(workoutId)] : null;
+    console.log('[DEBUG] currentWorkout found:', currentWorkout ? currentWorkout.title : 'NOT FOUND');
     if (!currentWorkout) {
-      alert(`Workout #${workoutId} details not found.`);
+      console.warn(`Workout #${workoutId} details not found in index.`);
       return;
     }
+
+    showView('viewWorkoutPlayer');
 
     const titleEl = document.getElementById('playerWorkoutTitle');
     const programBadge = document.getElementById('playerProgramBadge');
@@ -567,9 +586,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn btn-secondary btn-sm" style="width: 100%;">Play Workout ▶</button>
         </div>
       `;
-
-      card.addEventListener('click', () => openWorkoutPlayer(w.workoutPostId));
+      card.dataset.workoutId = String(w.workoutPostId);
       grid.appendChild(card);
+    });
+  }
+
+  const workoutsGrid = document.getElementById('workoutsCardsGrid');
+  if (workoutsGrid) {
+    workoutsGrid.addEventListener('click', (e) => {
+      const card = e.target.closest('.workout-card');
+      if (card && card.dataset.workoutId) {
+        openWorkoutPlayer(card.dataset.workoutId);
+      }
     });
   }
 
