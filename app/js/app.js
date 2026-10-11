@@ -15,8 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const DEFAULT_PI3_URL = 'http://192.168.187.103:8085';
   const DEFAULT_ARCHIMEDES_URL = 'https://data.taylorarchibald.com/menovation';
   
+  const isHttpsOrRemote = window.location.protocol === 'https:' || window.location.hostname.includes('taylorarchibald.com');
+  const defaultChoice = isHttpsOrRemote ? 'archimedes' : 'pi3';
+
   let mediaConfig = {
-    choice: localStorage.getItem('mvn_media_choice') || 'pi3',
+    choice: localStorage.getItem('mvn_media_choice') || defaultChoice,
     customUrl: localStorage.getItem('mvn_media_custom') || ''
   };
 
