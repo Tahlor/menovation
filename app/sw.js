@@ -21,6 +21,7 @@ const STATIC_PRECACHE_URLS = [
   './assets/fonts/NunitoSans-SemiBold.woff2',
   './assets/fonts/NunitoSans-Bold.woff2',
   './assets/data/programs.json',
+  './assets/data/workouts_index.json',
   './assets/data/core-basics.json',
   './assets/data/health-articles.json',
   './assets/data/nutrition-lessons.json',

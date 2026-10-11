@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menovation - Offline Strength & Wellness</title>
+  <title>Menovation - Whole Body Strength & Wellness</title>
   
   <!-- PWA & Mobile Metadata -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -19,234 +19,421 @@
 
   <!-- Top App Navigation -->
   <header class="app-header">
-    <div class="brand-wrapper">
+    <div class="brand-wrapper" id="brandLogoHome" style="cursor: pointer;">
       <img src="assets/images/menovation-wordmark-sand.png" alt="Menovation" class="brand-logo">
     </div>
-    <div class="network-status-badge online" id="networkStatusBadge">
-      <span class="status-dot"></span>
-      <span id="statusText">Online</span>
+    
+    <div class="header-right-tools">
+      <div class="server-status-pill" id="serverStatusBadge" title="Click to open server settings">
+        <span class="status-dot online"></span>
+        <span id="serverStatusText">Pi3 LAN</span>
+      </div>
+      <button class="icon-btn" id="settingsBtn" title="Media Server Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </div>
   </header>
 
-  <!-- Offline Status Announcement -->
-  <div class="offline-banner hidden" id="offlineBanner">
-    <span><strong>Offline Mode Active:</strong> You are currently disconnected from the internet. All workouts, articles, and logged symptoms are saved safely on your device.</span>
-  </div>
+  <!-- Main Navigation Bar -->
+  <nav class="main-tabs-bar">
+    <div class="tabs-scroll-container">
+      <button class="nav-tab active" data-view="viewPrograms">
+        <span class="tab-icon">🏋️</span> Programs
+      </button>
+      <button class="nav-tab" data-view="viewWorkouts">
+        <span class="tab-icon">⏱️</span> All Workouts <span class="tab-count-badge" id="totalWorkoutsBadge">507</span>
+      </button>
+      <button class="nav-tab" data-view="viewExercises">
+        <span class="tab-icon">🧘</span> Exercise Library <span class="tab-count-badge">1,134</span>
+      </button>
+      <button class="nav-tab" data-view="viewDiary">
+        <span class="tab-icon">📝</span> Wellness Diary
+      </button>
+    </div>
+  </nav>
 
   <main class="main-container">
 
-    <!-- 1. Authentication & Unlock View -->
-    <section id="authSection" class="auth-container">
-      <div class="auth-header">
-        <img src="assets/images/menovation-sq-purple-300.png" alt="Menovation Icon" style="width: 64px; height: 64px; margin-bottom: 1rem; border-radius: 12px;">
-        <h1 id="authTitle">Welcome to Menovation</h1>
-        <p class="auth-subtitle">Whole body strength & wellness through perimenopause.</p>
+    <!-- ========================================== -->
+    <!-- VIEW 1: PROGRAMS DIRECTORY                 -->
+    <!-- ========================================== -->
+    <section id="viewPrograms" class="app-view active">
+      <div class="view-header">
+        <div>
+          <h2>Workout Programs</h2>
+          <p class="view-subtitle">Whole body strength, mobility & pelvic floor balance designed for perimenopause and beyond.</p>
+        </div>
       </div>
 
-      <form id="loginForm">
-        <!-- Online Credentials -->
-        <div id="onlineFields">
-          <div class="form-group">
-            <label for="user_login">Username or E-mail</label>
-            <input type="text" id="user_login" class="form-control" placeholder="name@example.com" value="member@menovation.com">
-          </div>
-          <div class="form-group">
-            <label for="user_pass">Password</label>
-            <input type="password" id="user_pass" class="form-control" placeholder="••••••••" value="password123">
-          </div>
-        </div>
-
-        <!-- Offline PIN Unlock -->
-        <div class="form-group" id="offlinePinGroup" style="display: none;">
-          <label for="offline_pin">Offline PIN</label>
-          <input type="password" id="offline_pin" class="form-control" placeholder="Default PIN: 1234" maxlength="6" inputmode="numeric">
-          <p style="font-size: 0.8rem; color: var(--mvn-gray-600); margin-top: 0.35rem;">
-            Internet is down. Enter your 4-digit Offline PIN (Default: <code>1234</code>) to unlock your local workouts.
-          </p>
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="loginSubmitBtn">
-          Log In / Unlock App
-        </button>
-      </form>
-
-      <div class="auth-divider">
-        <span>OR</span>
+      <!-- Category Filter Pills -->
+      <div class="filter-pills-row" id="programCategoryPills">
+        <button class="filter-pill active" data-category="all">All Programs (21)</button>
+        <button class="filter-pill" data-category="strength">Strength Training</button>
+        <button class="filter-pill" data-category="pilates">Pilates & Barre</button>
+        <button class="filter-pill" data-category="mam">MAM Series</button>
+        <button class="filter-pill" data-category="yoga">Yoga & Mobility</button>
+        <button class="filter-pill" data-category="pelvic">Core & Pelvic Floor</button>
+        <button class="filter-pill" data-category="meditation">Meditation</button>
       </div>
 
-      <button type="button" class="btn btn-secondary" id="offlineGuestBtn">
-        Continue in Offline Guest Mode
-      </button>
+      <!-- Programs Grid -->
+      <div class="programs-grid" id="programsGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
     </section>
 
-    <!-- 2. Authenticated Dashboard View -->
-    <section id="dashboardSection" style="display: none;">
-      
-      <!-- Welcome Bar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-          <h2 id="userGreeting" style="color: var(--mvn-purple); font-size: 1.75rem;">Welcome, Member</h2>
-          <p style="color: var(--mvn-gray-600); font-size: 0.95rem;">Your offline wellness companion is ready.</p>
-        </div>
-        <div>
-          <button id="logoutBtn" class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
-            Lock / Switch Session
-          </button>
-        </div>
+    <!-- ========================================== -->
+    <!-- VIEW 2: PROGRAM DETAIL & WORKOUT SCHEDULE  -->
+    <!-- ========================================== -->
+    <section id="viewProgramDetail" class="app-view" style="display: none;">
+      <button class="back-link-btn" id="backToProgramsBtn">
+        &larr; Back to Programs
+      </button>
+
+      <div class="program-hero-card" id="programHeroCard">
+        <!-- Populated dynamically -->
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="tabs-nav">
-        <button class="tab-btn active" data-target="workoutsTab">Workouts & Programs</button>
-        <button class="tab-btn" data-target="symptomsTab">Daily Symptom Tracker</button>
-        <button class="tab-btn" data-target="educationTab">Education & Articles</button>
-        <button class="tab-btn" data-target="syncTab">
-          Sync Outbox <span class="badge badge-purple" id="syncCountBadge" style="display:none; margin-left: 0.25rem;">0</span>
-        </button>
-      </nav>
-
-      <!-- Tab 1: Workouts & Programs -->
-      <div class="tab-pane" id="workoutsTab" style="display: block;">
-        <div style="margin-bottom: 1.5rem;">
-          <h3 style="color: var(--mvn-purple); margin-bottom: 0.5rem;">Offline Workout Library</h3>
-          <p style="color: var(--mvn-gray-600);">
-            These programs and routines are pre-cached locally on your device and do not require an active internet connection.
-          </p>
-        </div>
-        <div class="grid-2" id="programsList">
-          <!-- Dynamic cards injected by app.js -->
-        </div>
+      <div class="section-title-bar">
+        <h3>Program Workouts</h3>
+        <span class="badge badge-sand" id="programWorkoutCount">0 Workouts</span>
       </div>
 
-      <!-- Tab 2: Daily Symptom Tracker -->
-      <div class="tab-pane" id="symptomsTab" style="display: none;">
-        <div class="grid-2">
+      <div class="program-workouts-list" id="programWorkoutsList">
+        <!-- Populated dynamically -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: WORKOUT PLAYER & CIRCUITS          -->
+    <!-- ========================================== -->
+    <section id="viewWorkoutPlayer" class="app-view" style="display: none;">
+      <button class="back-link-btn" id="backFromWorkoutBtn">
+        &larr; Back
+      </button>
+
+      <div class="workout-player-container">
+        <!-- Video Player Wrapper -->
+        <div class="video-wrapper">
+          <video id="workoutVideoPlayer" controls playsinline preload="metadata">
+            Your browser does not support the video tag.
+          </video>
           
-          <!-- Logging Form -->
-          <div class="card">
-            <h3 class="card-title">Log Today's Symptoms</h3>
-            <p style="color: var(--mvn-gray-600); font-size: 0.9rem; margin-bottom: 1.25rem;">
-              Logs are saved directly to device storage and queued to sync with Menovation Cloud once reconnected.
-            </p>
-
-            <form id="symptomForm">
-              <div class="symptom-slider-group">
-                <div class="symptom-slider-header">
-                  <label for="hotFlashes">Hot Flashes / Night Sweats</label>
-                  <span class="slider-value" id="hotFlashesVal">2</span>/5
-                </div>
-                <input type="range" id="hotFlashes" min="1" max="5" value="2">
-              </div>
-
-              <div class="symptom-slider-group">
-                <div class="symptom-slider-header">
-                  <label for="sleepQuality">Sleep Quality</label>
-                  <span class="slider-value" id="sleepQualityVal">3</span>/5
-                </div>
-                <input type="range" id="sleepQuality" min="1" max="5" value="3">
-              </div>
-
-              <div class="symptom-slider-group">
-                <div class="symptom-slider-header">
-                  <label for="moodScore">Mood & Emotional Balance</label>
-                  <span class="slider-value" id="moodScoreVal">4</span>/5
-                </div>
-                <input type="range" id="moodScore" min="1" max="5" value="4">
-              </div>
-
-              <div class="symptom-slider-group">
-                <div class="symptom-slider-header">
-                  <label for="brainFog">Brain Fog & Mental Focus</label>
-                  <span class="slider-value" id="brainFogVal">2</span>/5
-                </div>
-                <input type="range" id="brainFog" min="1" max="5" value="2">
-              </div>
-
-              <div class="form-group">
-                <label for="symptomNotes">Personal Notes</label>
-                <textarea id="symptomNotes" class="form-control" rows="2" placeholder="Diet, triggers, exercise notes..."></textarea>
-              </div>
-
-              <button type="submit" class="btn btn-primary">Save to Offline Diary</button>
-            </form>
+          <div class="video-source-info" id="videoSourceInfo">
+            <span id="videoCurrentSourceBadge">Streaming from Pi3</span>
+            <button class="text-link-btn" id="changeSourceQuickBtn">Change Host</button>
           </div>
+        </div>
 
-          <!-- History & Summary -->
-          <div class="card">
-            <h3 class="card-title">Recent Offline Entries</h3>
-            <p style="color: var(--mvn-gray-600); font-size: 0.9rem; margin-bottom: 1rem;">
-              Cached records stored in local IndexedDB:
-            </p>
-            <div id="symptomHistory">
-              <!-- Rendered by app.js -->
-            </div>
+        <!-- Video Player Quick Controls Bar -->
+        <div class="player-controls-bar">
+          <div class="speed-selector">
+            <label>Speed:</label>
+            <button class="speed-pill" data-speed="0.75">0.75x</button>
+            <button class="speed-pill active" data-speed="1.0">1.0x</button>
+            <button class="speed-pill" data-speed="1.25">1.25x</button>
+            <button class="speed-pill" data-speed="1.5">1.5x</button>
           </div>
-
+          
+          <div class="skip-buttons">
+            <button class="btn btn-sm btn-secondary" id="skipBackBtn">-10s</button>
+            <button class="btn btn-sm btn-secondary" id="skipForwardBtn">+10s</button>
+            <button class="btn btn-sm btn-primary" id="fullscreenBtn">Fullscreen ⛶</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Tab 3: Education & Articles -->
-      <div class="tab-pane" id="educationTab" style="display: none;">
-        <div style="margin-bottom: 1.5rem;">
-          <h3 style="color: var(--mvn-purple); margin-bottom: 0.5rem;">Perimenopause Knowledge Base</h3>
-          <p style="color: var(--mvn-gray-600);">
-            Guides from leading doctors, physical therapists, and certified nutritionists—stored locally.
-          </p>
-        </div>
-        <div class="grid-2" id="educationList">
-          <!-- Injected by app.js -->
-        </div>
-      </div>
-
-      <!-- Tab 4: Sync Outbox -->
-      <div class="tab-pane" id="syncTab" style="display: none;">
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <!-- Workout Header & Completion -->
+        <div class="workout-header-card">
+          <div class="workout-title-row">
             <div>
-              <h3 class="card-title" style="margin-bottom: 0.25rem;">Mutation Outbox Queue</h3>
-              <p style="color: var(--mvn-gray-600); font-size: 0.9rem;">
-                Pending events recorded while offline waiting to be uploaded to Menovation WP REST API.
-              </p>
+              <span class="badge badge-purple" id="playerProgramBadge">Program</span>
+              <h1 id="playerWorkoutTitle" class="workout-player-title">Workout Title</h1>
             </div>
-            <button id="syncNowBtn" class="btn btn-neon" style="width: auto; padding: 0.6rem 1.25rem;">
-              Sync Now ↻
+            <button class="btn btn-success" id="markCompleteBtn">
+              ✓ Mark Complete
             </button>
           </div>
 
-          <table class="sync-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Target Endpoint</th>
-                <th>Method</th>
-                <th>Logged At</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="syncTableBody">
-              <!-- Injected by app.js -->
-            </tbody>
-          </table>
+          <div class="workout-meta-chips" id="playerMetaChips">
+            <span class="meta-chip" id="playerDurationChip">⏱️ 0 Min</span>
+            <span class="meta-chip" id="playerDifficultyChip">Level</span>
+            <span class="meta-chip" id="playerFocusChip">Target Focus</span>
+          </div>
+
+          <!-- The Why -->
+          <div class="coaching-why-card" id="playerTheWhyCard" style="display: none;">
+            <h4>Why This Workout:</h4>
+            <p id="playerTheWhyText"></p>
+          </div>
+
+          <!-- Equipment Required -->
+          <div class="equipment-section" id="playerEquipmentSection">
+            <h4>Equipment Required:</h4>
+            <div class="equipment-chips" id="playerEquipmentChips"></div>
+          </div>
+        </div>
+
+        <!-- Workout Circuits Breakdown -->
+        <div class="circuits-breakdown-card">
+          <h3>Workout Circuit Structure</h3>
+          <p class="subtitle">Follow along with the video or review the movements below. Click any exercise to view the demonstration GIF.</p>
+          <div class="circuits-container" id="playerCircuitsContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: ALL WORKOUTS SEARCH & BROWSE       -->
+    <!-- ========================================== -->
+    <section id="viewWorkouts" class="app-view" style="display: none;">
+      <div class="view-header">
+        <div>
+          <h2>All Workouts</h2>
+          <p class="view-subtitle">Search and filter across all 507 full-length workout videos.</p>
         </div>
       </div>
 
+      <!-- Search & Filters -->
+      <div class="search-filters-bar">
+        <div class="search-box-wrapper">
+          <input type="text" id="workoutSearchInput" class="form-control" placeholder="Search by title, target muscle, or keyword...">
+        </div>
+        
+        <div class="filter-dropdowns-row">
+          <select id="workoutDurationFilter" class="form-control filter-select">
+            <option value="all">Any Duration</option>
+            <option value="short">&lt; 15 Minutes</option>
+            <option value="medium">15 &ndash; 25 Minutes</option>
+            <option value="long">25 &ndash; 35 Minutes</option>
+            <option value="xlarge">35+ Minutes</option>
+          </select>
+
+          <select id="workoutCategoryFilter" class="form-control filter-select">
+            <option value="all">All Categories</option>
+            <option value="Strength">Strength Training</option>
+            <option value="General">General &amp; Recovery</option>
+          </select>
+
+          <select id="workoutSortSelect" class="form-control filter-select">
+            <option value="title">Sort: Title (A-Z)</option>
+            <option value="durationAsc">Duration (Shortest first)</option>
+            <option value="durationDesc">Duration (Longest first)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="workouts-count-summary" id="workoutsResultsSummary">
+        Showing all workouts
+      </div>
+
+      <!-- Workouts Grid -->
+      <div class="workouts-cards-grid" id="workoutsCardsGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 5: EXERCISE LIBRARY (1,134 MOVES)     -->
+    <!-- ========================================== -->
+    <section id="viewExercises" class="app-view" style="display: none;">
+      <div class="view-header">
+        <div>
+          <h2>Exercise Movement Library</h2>
+          <p class="view-subtitle">1,134 demonstrated exercise movements with animated form previews and muscle cues.</p>
+        </div>
+      </div>
+
+      <div class="search-filters-bar">
+        <div class="search-box-wrapper">
+          <input type="text" id="exerciseSearchInput" class="form-control" placeholder="Search moves (e.g. Squat, Glute Bridge, Band Row, Curl)...">
+        </div>
+
+        <div class="filter-pills-row" id="exerciseFilterPills">
+          <button class="filter-pill active" data-equipment="all">All Movements</button>
+          <button class="filter-pill" data-equipment="weights">Weights Only</button>
+          <button class="filter-pill" data-equipment="bands">Bands Only</button>
+          <button class="filter-pill" data-equipment="bodyweight">Bodyweight</button>
+        </div>
+      </div>
+
+      <div class="workouts-count-summary" id="exerciseResultsSummary">
+        Showing exercises
+      </div>
+
+      <!-- Exercise Cards Grid -->
+      <div class="exercise-cards-grid" id="exerciseCardsGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 6: WELLNESS & SYMPTOM DIARY           -->
+    <!-- ========================================== -->
+    <section id="viewDiary" class="app-view" style="display: none;">
+      <div class="view-header">
+        <div>
+          <h2>Daily Symptom Tracker</h2>
+          <p class="view-subtitle">Private, local-first logging of daily well-being, sleep, and menopausal symptoms.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Log Form Card -->
+        <div class="card">
+          <h3 class="card-title">Log Today's Wellness</h3>
+          <p class="form-subtext">Saved safely to your offline browser database.</p>
+
+          <form id="symptomForm">
+            <div class="symptom-slider-group">
+              <div class="slider-header">
+                <label for="hotFlashes">Hot Flashes / Night Sweats</label>
+                <span class="slider-val" id="hotFlashesVal">2</span> / 5
+              </div>
+              <input type="range" id="hotFlashes" min="1" max="5" value="2">
+            </div>
+
+            <div class="symptom-slider-group">
+              <div class="slider-header">
+                <label for="sleepQuality">Sleep Quality</label>
+                <span class="slider-val" id="sleepQualityVal">3</span> / 5
+              </div>
+              <input type="range" id="sleepQuality" min="1" max="5" value="3">
+            </div>
+
+            <div class="symptom-slider-group">
+              <div class="slider-header">
+                <label for="moodScore">Mood &amp; Emotional Balance</label>
+                <span class="slider-val" id="moodScoreVal">4</span> / 5
+              </div>
+              <input type="range" id="moodScore" min="1" max="5" value="4">
+            </div>
+
+            <div class="symptom-slider-group">
+              <div class="slider-header">
+                <label for="brainFog">Mental Focus &amp; Clarity</label>
+                <span class="slider-val" id="brainFogVal">2</span> / 5
+              </div>
+              <input type="range" id="brainFog" min="1" max="5" value="2">
+            </div>
+
+            <div class="form-group">
+              <label for="symptomNotes">Daily Notes</label>
+              <textarea id="symptomNotes" class="form-control" rows="3" placeholder="Workouts done, nutrition notes, energy levels..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              Save Daily Entry
+            </button>
+          </form>
+        </div>
+
+        <!-- History Card -->
+        <div class="card">
+          <h3 class="card-title">Recent Diary Entries</h3>
+          <div id="diaryHistoryContainer" class="diary-history-list"></div>
+        </div>
+      </div>
     </section>
 
   </main>
 
+  <!-- ========================================== -->
+  <!-- MODAL: EXERCISE GIF DEMONSTRATION          -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" id="exerciseModal" style="display: none;">
+    <div class="modal-content modal-exercise">
+      <button class="modal-close-btn" id="closeExerciseModalBtn">&times;</button>
+      <div class="modal-gif-wrapper">
+        <img id="modalExerciseGif" src="" alt="Exercise Demo" class="exercise-preview-gif">
+        <div class="gif-loading-spinner" id="gifLoadingSpinner">Loading preview...</div>
+      </div>
+      <div class="modal-exercise-info">
+        <h3 id="modalExerciseTitle">Exercise Title</h3>
+        <div class="modal-exercise-tags" id="modalExerciseTags"></div>
+        <p id="modalExerciseCues" class="exercise-cues-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: MEDIA SERVER & APP SETTINGS         -->
+  <!-- ========================================== -->
+  <div class="modal-backdrop" id="settingsModal" style="display: none;">
+    <div class="modal-content modal-settings">
+      <button class="modal-close-btn" id="closeSettingsModalBtn">&times;</button>
+      
+      <div class="settings-modal-header">
+        <h3 class="font-serif">Media Server Settings</h3>
+        <p class="modal-subtitle">Configure where workout movies and exercise GIFs are streamed from.</p>
+      </div>
+
+      <div class="settings-form">
+        <div class="form-group">
+          <label>Select Media Server Endpoint:</label>
+          <div class="server-options-list">
+            <label class="server-option">
+              <input type="radio" name="mediaServerChoice" value="pi3" checked>
+              <div class="server-option-text">
+                <strong>Raspberry Pi 3 (Local LAN)</strong>
+                <span><code>http://192.168.187.103:8085</code> &bull; Fast home Wi-Fi streaming</span>
+              </div>
+            </label>
+
+            <label class="server-option">
+              <input type="radio" name="mediaServerChoice" value="archimedes">
+              <div class="server-option-text">
+                <strong>Archimedes Server (Cloud / Remote)</strong>
+                <span><code>https://data.taylorarchibald.com/menovation</code> &bull; Secure tunnel</span>
+              </div>
+            </label>
+
+            <label class="server-option">
+              <input type="radio" name="mediaServerChoice" value="same_origin">
+              <div class="server-option-text">
+                <strong>Same-Origin / Auto</strong>
+                <span>Streams relative to current website host (port 8085)</span>
+              </div>
+            </label>
+
+            <label class="server-option">
+              <input type="radio" name="mediaServerChoice" value="custom">
+              <div class="server-option-text">
+                <strong>Custom Host URL:</strong>
+                <input type="text" id="customServerInput" class="form-control custom-server-input" placeholder="http://192.168.1.50:8085">
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="test-connection-box">
+          <button class="btn btn-secondary" id="testServerBtn">
+            Test Server Connection ⚡
+          </button>
+          <div id="testServerResult" class="test-result-message"></div>
+        </div>
+
+        <div class="settings-actions">
+          <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="app-footer">
-    <p><strong>Menovation Offline-First Suite</strong> &bull; Authorized Offline Architecture & Webapp</p>
+    <p><strong>Menovation Offline-First Suite</strong> &bull; 507 Workout Movies &bull; 1,134 Exercise Demonstrations &bull; Served locally via Pi3</p>
   </footer>
 
   <!-- Scripts -->
   <script src="js/db.js"></script>
   <script src="js/app.js"></script>
   <script>
-    // Register Service Worker for offline PWA functionality
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('[ServiceWorker] Registered with scope:', reg.scope))
+          .then(reg => console.log('[ServiceWorker] Registered:', reg.scope))
           .catch(err => console.warn('[ServiceWorker] Registration failed:', err));
       });
     }

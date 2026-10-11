@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'menovation_offline_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 class MenovationDB {
   constructor() {
@@ -35,6 +35,16 @@ class MenovationDB {
         if (!db.objectStoreNames.contains('workout_logs')) {
           const workoutStore = db.createObjectStore('workout_logs', { keyPath: 'id', autoIncrement: true });
           workoutStore.createIndex('date', 'date', { unique: false });
+        }
+
+        // Completed workouts state
+        if (!db.objectStoreNames.contains('completed_workouts')) {
+          db.createObjectStore('completed_workouts', { keyPath: 'workoutId' });
+        }
+
+        // App settings (e.g. preferred media server host)
+        if (!db.objectStoreNames.contains('app_settings')) {
+          db.createObjectStore('app_settings', { keyPath: 'key' });
         }
 
         // Mutation sync outbox (events queued while offline)
