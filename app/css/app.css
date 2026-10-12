@@ -1230,6 +1230,67 @@ input[type="range"] {
   border-radius: 999px;
 }
 
+/* Guided Flow / Yoga / Breathwork Card */
+.circuit-flow-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  background-color: var(--mvn-light-cream);
+  border: 1px solid var(--mvn-light-sand);
+  border-left: 4px solid var(--mvn-purple);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.85rem 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.circuit-flow-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mvn-shadow-md);
+}
+
+.circuit-flow-icon-frame {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  background: rgba(119, 0, 83, 0.08);
+  border: 1px solid rgba(119, 0, 83, 0.15);
+  border-radius: var(--mvn-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+}
+
+.circuit-flow-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.circuit-flow-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.circuit-flow-name {
+  color: var(--mvn-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.circuit-flow-desc {
+  font-size: 0.82rem;
+  color: var(--mvn-gray-600);
+  font-weight: 500;
+}
+
+
 @media (max-width: 600px) {
   .circuit-exercise-card {
     gap: 0.75rem;

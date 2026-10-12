@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   updateServerBadgeDisplay();
 
-  // --- 1. VIEW SWITCHING ---
+  // --- 1. VIEW SWITCHING & ROUTING ---
   function showView(viewId) {
     Object.keys(views).forEach(key => {
       if (views[key]) {
@@ -163,18 +163,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function navigateTo(hash) {
+    if (window.location.hash === hash) {
+      handleHashRouting();
+    } else {
+      window.location.hash = hash;
+    }
+  }
+
+  async function handleHashRouting() {
+    if (!programsData || !workoutsIndex) return;
+    const hash = window.location.hash || '#/programs';
+
+    // Close any open modals when navigating routes
+    if (exerciseModal) exerciseModal.style.display = 'none';
+    if (settingsModal) settingsModal.style.display = 'none';
+
+    const workoutMatch = hash.match(/^#\/workout\/(\d+)$/);
+    if (workoutMatch) {
+      await renderWorkoutPlayerView(workoutMatch[1]);
+      return;
+    }
+
+    const programMatch = hash.match(/^#\/program\/(\d+)$/);
+    if (programMatch) {
+      await renderProgramDetailView(programMatch[1]);
+      return;
+    }
+
+    if (hash === '#/workouts') {
+      showView('viewWorkouts');
+      document.title = 'All Workouts | Menovation';
+      return;
+    }
+
+    if (hash === '#/exercises') {
+      showView('viewExercises');
+      document.title = 'Exercise Library | Menovation';
+      return;
+    }
+
+    if (hash === '#/diary') {
+      showView('viewDiary');
+      document.title = 'Wellness Diary | Menovation';
+      return;
+    }
+
+    // Default: Programs view
+    showView('viewPrograms');
+    document.title = 'Menovation - Strength & Vitality';
+  }
+
+  window.addEventListener('hashchange', () => {
+    if (programsData && workoutsIndex) {
+      handleHashRouting();
+    }
+  });
+
   navTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const targetView = tab.dataset.view;
-      if (targetView) showView(targetView);
+      if (targetView === 'viewPrograms') navigateTo('#/programs');
+      else if (targetView === 'viewWorkouts') navigateTo('#/workouts');
+      else if (targetView === 'viewExercises') navigateTo('#/exercises');
+      else if (targetView === 'viewDiary') navigateTo('#/diary');
     });
   });
 
-  brandLogoHome.addEventListener('click', () => showView('viewPrograms'));
-  document.getElementById('backToProgramsBtn').addEventListener('click', () => showView('viewPrograms'));
+  brandLogoHome.addEventListener('click', () => navigateTo('#/programs'));
+  document.getElementById('backToProgramsBtn').addEventListener('click', () => {
+    navigateTo('#/programs');
+  });
   document.getElementById('backFromWorkoutBtn').addEventListener('click', () => {
-    if (currentProgram) showView('viewProgramDetail');
-    else showView('viewWorkouts');
+    if (currentWorkout && currentWorkout.programPostId) {
+      navigateTo('#/program/' + currentWorkout.programPostId);
+    } else {
+      navigateTo('#/workouts');
+    }
   });
 
   // Resilient JSON fetch with exponential backoff
@@ -209,6 +274,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAllWorkoutsList();
       renderExerciseLibrary('all');
       loadDiaryHistory();
+
+      // Dispatch route from initial URL hash
+      await handleHashRouting();
     } catch (err) {
       console.error('Failed to load local app data catalogs:', err);
     }
@@ -278,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
 
-      card.addEventListener('click', () => openProgramDetail(pid));
+      card.addEventListener('click', () => navigateTo('#/program/' + pid));
       grid.appendChild(card);
     });
   }
@@ -293,7 +361,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // --- 4. PROGRAM DETAIL VIEW ---
-  async function openProgramDetail(pid) {
+  function openProgramDetail(pid) {
+    navigateTo('#/program/' + pid);
+  }
+
+  async function renderProgramDetailView(pid) {
     currentProgram = programsData[pid];
     if (!currentProgram) return;
 
@@ -302,6 +374,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const heroCard = document.getElementById('programHeroCard');
     const workoutsListContainer = document.getElementById('programWorkoutsList');
     const workoutCountBadge = document.getElementById('programWorkoutCount');
+
+    document.title = `${info.programTitle || 'Program ' + pid} | Menovation`;
 
     // Get completed workouts set
     const completedSet = new Set((await window.mvnDB.getAll('completed_workouts')).map(c => String(c.workoutId)));
@@ -360,7 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </button>
       `;
 
-      row.addEventListener('click', () => openWorkoutPlayer(w.workoutPostId));
+      row.addEventListener('click', () => navigateTo('#/workout/' + w.workoutPostId));
       workoutsListContainer.appendChild(row);
     });
 
@@ -368,14 +442,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // --- 5. WORKOUT PLAYER VIEW ---
-  async function openWorkoutPlayer(workoutId) {
-    console.log('[DEBUG] openWorkoutPlayer called with workoutId:', workoutId);
+  function openWorkoutPlayer(workoutId) {
+    navigateTo('#/workout/' + workoutId);
+  }
+
+  async function renderWorkoutPlayerView(workoutId) {
+    console.log('[DEBUG] renderWorkoutPlayerView called with workoutId:', workoutId);
     currentWorkout = workoutsIndex ? workoutsIndex[String(workoutId)] : null;
     console.log('[DEBUG] currentWorkout found:', currentWorkout ? currentWorkout.title : 'NOT FOUND');
     if (!currentWorkout) {
       console.warn(`Workout #${workoutId} details not found in index.`);
+      showView('viewWorkouts');
       return;
     }
+
+    document.title = `${currentWorkout.title} | Menovation`;
 
     showView('viewWorkoutPlayer');
 
@@ -497,8 +578,96 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Circuit Breakdown Renderer
-  // Circuit Breakdown Renderer with Rich Formatting & In-Frame Playable GIFs
+  // --- EXERCISE NORMALIZER & SYNONYM ENGINE ---
+  const EXERCISE_ALIASES = {
+    'superman': 'super woman',
+    'supermans': 'super woman',
+    'superwoman': 'super woman',
+    'super mom': 'exercise ball super mom',
+    'stiff leg deadlifts': 'romanian deadlift',
+    'stiff leg deadlift': 'romanian deadlift',
+    'slow sit up': 'stability ball sit ups',
+    'slow sit ups': 'stability ball sit ups',
+    'kneeling tricep kickback': 'quadruped kickback with band',
+    'kneeling tricep kickbacks': 'quadruped kickback with band',
+    'explosive push up': 'elevated plyometric push up',
+    'explosive push ups': 'elevated plyometric push up',
+    'tripod row': 'bench supported kneeling row with eccentric return',
+    'upright row': 'dumbbell deadlift high pull',
+    'bridge pullover': 'elevated bridge',
+    'concentration curl': 'seated hammer curls',
+    'concentration curls': 'seated hammer curls',
+    'pogo hops': 'lateral hop with step and weight',
+    'pogo hop': 'lateral hop with step and weight',
+    'power pogo hops': 'lateral hop with step and weight',
+    'single leg deadlift curtsey style': 'single leg deadlift',
+    'single leg deadlift curtsy style': 'single leg deadlift',
+    'x-band walk': 'band and dumbbell row',
+    'offset squats': 'offset squat',
+    'supported squat': 'supported 1-leg squat',
+    'supported bridge': 'supported 1-leg bridge',
+    'upward explosion': 'high knees'
+  };
+
+  function normalizeExerciseName(name) {
+    let s = (name || '').toLowerCase().trim();
+    s = s.replace(/\b(db|d\.b\.)\b/g, 'dumbbell');
+    s = s.replace(/\b(kb|k\.b\.)\b/g, 'kettlebell');
+    s = s.replace(/\bsingle\s+leg\b/g, '1-leg');
+    s = s.replace(/\bsingle\s+arm\b/g, '1-arm');
+    s = s.replace(/\bone\s+leg\b/g, '1-leg');
+    s = s.replace(/\bone\s+arm\b/g, '1-arm');
+    s = s.replace(/\bpushups\b/g, 'push ups');
+    s = s.replace(/\bpushup\b/g, 'push up');
+    if (EXERCISE_ALIASES[s]) s = EXERCISE_ALIASES[s];
+    return s;
+  }
+
+  function findExerciseByName(name) {
+    if (!exercisesData || !name) return null;
+    const norm = normalizeExerciseName(name);
+    const clean = norm.replace(/[^a-z0-9]/g, '');
+    if (!clean) return null;
+    const exercisesList = Object.values(exercisesData);
+
+    // 1. Exact cleaned match
+    for (const ex of exercisesList) {
+      const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (exClean === clean) return ex;
+    }
+
+    // 2. Singular / plural match
+    const singularClean = clean.replace(/s$/, '');
+    for (const ex of exercisesList) {
+      const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (exClean === singularClean || exClean.replace(/s$/, '') === clean) return ex;
+    }
+
+    // 3. Substring inclusion match
+    for (const ex of exercisesList) {
+      const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (exClean.includes(clean) || clean.includes(exClean)) return ex;
+    }
+
+    // 4. Token overlap match (score >= 2)
+    const words = norm.replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    let bestEx = null;
+    let bestScore = 0;
+    for (const ex of exercisesList) {
+      const exTitle = (ex.exerciseTitle || '').toLowerCase();
+      let score = 0;
+      for (const w of words) {
+        if (exTitle.includes(w)) score++;
+      }
+      if (score > bestScore && score >= 2) {
+        bestScore = score;
+        bestEx = ex;
+      }
+    }
+    return bestEx;
+  }
+
+  // --- CIRCUIT BREAKDOWN RENDERER ---
   function renderCircuitBreakdown(text, container) {
     container.innerHTML = '';
     const cleaned = cleanText(text);
@@ -514,18 +683,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!plain) return;
 
       // 1. Check for Circuit / Section header
-      // e.g. "Circuit 1", "Round 1", "Warm Up", "Cool Down", "Block A", "Finisher"
-      const isCircuitHeader = /^(circuit\s*\d*|round\s*\d+|warm\s*up|cool\s*down|finisher|superset|tri-set|block\s*[a-z0-9]|emom|amrap)/i.test(plain);
-      
+      // e.g. "Circuit 1", "Round 1", "Warm Up", "Cool Down", "Block A", "Finisher", "Tabata 1", "Core Finisher", "Main Flow", "Poses in this flow", "Closing", "Pranayama"
+      const isCircuitHeader = /^(circuit\s*\d*|round\s*\d+|warm\s*up|cool\s*down|finisher|core\s*finisher|superset|tri-set|block\s*[a-z0-9]|emom|amrap|tabata\s*\d*|poses\s*in|main\s*flow|closing|pranayama|flow\s*\d*)/i.test(plain);
+
       // 2. Check for Rounds/Sets prescription line
-      // e.g. "2 Rounds", "3 Sets", "Repeat 2 times"
       const isRoundsPrescription = /^(\d+\s*(rounds?|sets?)|repeat\s*\d+\s*times?)/i.test(plain);
 
       if (isCircuitHeader) {
         blockCount++;
         currentBlock = document.createElement('div');
         currentBlock.className = 'circuit-block';
-        
+
         const headerEl = document.createElement('div');
         headerEl.className = 'circuit-header';
         headerEl.innerHTML = `
@@ -562,7 +730,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentBlock.innerHTML = `
           <div class="circuit-header">
             <div class="circuit-header-left">
-              <span class="circuit-badge">Circuit</span>
+              <span class="circuit-badge">Part 1</span>
               <h3 class="circuit-header-title">Movements</h3>
             </div>
           </div>
@@ -573,7 +741,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       // 3. Check for Rest interval
-      // e.g. "Rest — 20 seconds", "Rest 20 — seconds", "Rest"
       const isRest = /^rest\b/i.test(plain);
       if (isRest) {
         const restDiv = document.createElement('div');
@@ -591,45 +758,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // 4. Exercise line: parse name and interval
-      const parts = plain.split(/—|-|–/);
+      // 4. Exercise line: strip leading list markers/bullets
+      const cleanLine = plain.replace(/^[\s\-\—\–\•\*\d+\.\)]+/, '').trim();
+      if (!cleanLine) return;
+
+      // Split exercise name and prescription on em-dash, en-dash, colon, or spaced hyphen
+      const parts = cleanLine.split(/\s+[—–-]\s+|[—–]|:\s+/);
       const exName = parts[0].trim();
       const exDetail = parts.length > 1 ? parts.slice(1).join(' - ').trim() : '';
 
       const matchedEx = findExerciseByName(exName);
-      const gifUrl = matchedEx ? getGifUrl(matchedEx.gifUrl) : '';
 
-      const card = document.createElement('div');
-      card.className = 'circuit-exercise-card';
+      if (matchedEx) {
+        // Exercise has library GIF demonstration and form cues
+        const gifUrl = getGifUrl(matchedEx.gifUrl);
+        const card = document.createElement('div');
+        card.className = 'circuit-exercise-card';
 
-      card.innerHTML = `
-        <div class="circuit-exercise-thumb-frame" title="Click for fullscreen demonstration">
-          ${gifUrl ? `
-            <img src="${gifUrl}" alt="${exName}" class="circuit-exercise-gif" loading="lazy" onerror="if(!this.dataset.retried){this.dataset.retried='1'; setTimeout(()=>{this.src='${gifUrl}';},1200);}else{this.onerror=null; this.src='assets/images/menovation-sq-purple-300.png';}">
-            <button class="expand-gif-overlay-btn" title="View Fullscreen Demo" data-exid="${matchedEx.exerciseId}">⛶</button>
-          ` : `
-            <div class="circuit-exercise-placeholder-icon">💪</div>
-          `}
-        </div>
-        <div class="circuit-exercise-info">
-          <div class="circuit-exercise-title-row">
-            <h4 class="circuit-exercise-name">${exName}</h4>
-            ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
+        card.innerHTML = `
+          <div class="circuit-exercise-thumb-frame" title="Click for fullscreen demonstration">
+            ${gifUrl ? `
+              <img src="${gifUrl}" alt="${matchedEx.exerciseTitle}" class="circuit-exercise-gif" loading="lazy" onerror="if(!this.dataset.retried){this.dataset.retried='1'; setTimeout(()=>{this.src='${gifUrl}';},1200);}else{this.onerror=null; this.src='assets/images/menovation-sq-purple-300.png';}">
+              <button class="expand-gif-overlay-btn" title="View Fullscreen Demo" data-exid="${matchedEx.exerciseId}">⛶</button>
+            ` : `
+              <div class="circuit-exercise-placeholder-icon">💪</div>
+            `}
           </div>
-          <div class="circuit-exercise-meta">
-            ${matchedEx && matchedEx.usesWeights ? '<span class="badge badge-purple badge-xs">Weights</span>' : ''}
-            ${matchedEx && matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bands</span>' : ''}
-            ${matchedEx && !matchedEx.usesWeights && !matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bodyweight</span>' : ''}
-          </div>
-          ${matchedEx ? `
+          <div class="circuit-exercise-info">
+            <div class="circuit-exercise-title-row">
+              <h4 class="circuit-exercise-name">${exName}</h4>
+              ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
+            </div>
+            <div class="circuit-exercise-meta">
+              ${matchedEx.usesWeights ? '<span class="badge badge-purple badge-xs">Weights</span>' : ''}
+              ${matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bands</span>' : ''}
+              ${!matchedEx.usesWeights && !matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bodyweight</span>' : ''}
+            </div>
             <button class="circuit-exercise-view-modal-btn" data-exid="${matchedEx.exerciseId}">
               Form Cues &amp; Tips &rarr;
             </button>
-          ` : ''}
-        </div>
-      `;
+          </div>
+        `;
 
-      if (matchedEx) {
         const expandBtn = card.querySelector('.expand-gif-overlay-btn');
         if (expandBtn) {
           expandBtn.addEventListener('click', (e) => {
@@ -648,46 +818,50 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (thumbFrame) {
           thumbFrame.addEventListener('click', () => openExerciseModal(matchedEx));
         }
-      }
 
-      currentExercisesList.appendChild(card);
+        currentExercisesList.appendChild(card);
+      } else {
+        // Unmatched: Check if Yoga / Flow / Breathwork / Mobility or general guided movement
+        const isBreathwork = /\b(breathing|breath|pranayama|inhale|exhale)\b/i.test(exName);
+        const isYoga = /\b(pose|flow|dog|salutation|savasana|warrior|twist|chaturanga|cobra|fold|forward|child|crescent|lunge\s*flow|sun\s*salutation|pigeon|camel|rag\s*doll|half\s*splits|stretch)\b/i.test(exName);
+
+        const card = document.createElement('div');
+        card.className = 'circuit-flow-card';
+
+        let icon = '⚡';
+        let badgeText = 'Guided Movement';
+        let badgeClass = 'badge-purple';
+        let descText = 'Follow along with coach in full video';
+
+        if (isBreathwork) {
+          icon = '🫁';
+          badgeText = 'Breathwork';
+          badgeClass = 'badge-sand';
+          descText = 'Guided breathwork practice • Follow coach in video';
+        } else if (isYoga) {
+          icon = '🧘';
+          badgeText = 'Guided Flow';
+          badgeClass = 'badge-purple';
+          descText = 'Continuous yoga flow • Follow coach in video';
+        }
+
+        card.innerHTML = `
+          <div class="circuit-flow-icon-frame">${icon}</div>
+          <div class="circuit-flow-info">
+            <div class="circuit-flow-title-row">
+              <h4 class="circuit-flow-name">${exName}</h4>
+              <div style="display:flex; align-items:center; gap:0.4rem;">
+                ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
+                <span class="badge ${badgeClass} badge-xs">${badgeText}</span>
+              </div>
+            </div>
+            <div class="circuit-flow-desc">${descText}</div>
+          </div>
+        `;
+
+        currentExercisesList.appendChild(card);
+      }
     });
-  }
-
-  function findExerciseByName(name) {
-    if (!exercisesData || !name) return null;
-    const clean = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!clean) return null;
-    const exercisesList = Object.values(exercisesData);
-
-    // 1. Exact cleaned match
-    for (const ex of exercisesList) {
-      const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (exClean === clean) return ex;
-    }
-
-    // 2. Substring inclusion match
-    for (const ex of exercisesList) {
-      const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (exClean.includes(clean) || clean.includes(exClean)) return ex;
-    }
-
-    // 3. Word token overlap match (highest token score)
-    const words = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-    let bestEx = null;
-    let bestScore = 0;
-    for (const ex of exercisesList) {
-      const exTitle = (ex.exerciseTitle || '').toLowerCase();
-      let score = 0;
-      for (const w of words) {
-        if (exTitle.includes(w)) score++;
-      }
-      if (score > bestScore && score >= 2) {
-        bestScore = score;
-        bestEx = ex;
-      }
-    }
-    return bestEx;
   }
 
   // --- 6. ALL WORKOUTS VIEW ---
