@@ -375,20 +375,19 @@
       <div class="settings-form">
         <div class="form-group">
           <label>Select Media Server Endpoint:</label>
-          <div class="server-options-list">
             <label class="server-option">
-              <input type="radio" name="mediaServerChoice" value="pi3" checked>
+              <input type="radio" name="mediaServerChoice" value="archimedes" checked>
               <div class="server-option-text">
-                <strong>Raspberry Pi 3 (Local LAN)</strong>
-                <span><code>http://192.168.187.103:8085</code> &bull; Fast home Wi-Fi streaming</span>
+                <strong>Archimedes Server (Cloud / Remote / HTTPS)</strong>
+                <span><code>https://data.taylorarchibald.com/menovation</code> &bull; Fast SSD Cache &amp; Remote Streaming</span>
               </div>
             </label>
 
             <label class="server-option">
-              <input type="radio" name="mediaServerChoice" value="archimedes">
+              <input type="radio" name="mediaServerChoice" value="pi3">
               <div class="server-option-text">
-                <strong>Archimedes Server (Cloud / Remote)</strong>
-                <span><code>https://data.taylorarchibald.com/menovation</code> &bull; Secure tunnel</span>
+                <strong>Raspberry Pi 3 (Local LAN only)</strong>
+                <span><code>http://192.168.187.103:8085</code> &bull; Direct LAN (Requires HTTP origin)</span>
               </div>
             </label>
 

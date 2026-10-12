@@ -12,6 +12,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentProgram = null;
 
   // Media Server Configuration
+  // Unicode unescaper and HTML entity cleaner
+  function cleanText(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .trim();
+  }
+
+  // Media Server Configuration
   const DEFAULT_PI3_URL = 'http://192.168.187.103:8085';
   const DEFAULT_ARCHIMEDES_URL = 'https://data.taylorarchibald.com/menovation';
   
@@ -23,7 +39,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     customUrl: localStorage.getItem('mvn_media_custom') || ''
   };
 
+  // If on HTTPS/Remote, never allow insecure HTTP 'pi3' which browsers block as Mixed Content
+  if (isHttpsOrRemote && (mediaConfig.choice === 'pi3' || !mediaConfig.choice)) {
+    mediaConfig.choice = 'archimedes';
+    localStorage.setItem('mvn_media_choice', 'archimedes');
+  }
+
   function getMediaBaseUrl() {
+    if (isHttpsOrRemote) {
+      if (mediaConfig.choice === 'custom' && mediaConfig.customUrl && mediaConfig.customUrl.startsWith('https://')) {
+        return mediaConfig.customUrl.replace(/\/+$/, '');
+      }
+      // Stay on same-origin /menovation on Archimedes
+      return window.location.origin + '/menovation';
+    }
     if (mediaConfig.choice === 'archimedes') {
       return DEFAULT_ARCHIMEDES_URL;
     }
@@ -372,7 +401,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // The Why
     if (currentWorkout.theWhy) {
       theWhyCard.style.display = 'block';
-      theWhyText.textContent = currentWorkout.theWhy;
+      const cleanedWhy = cleanText(currentWorkout.theWhy);
+      const paragraphs = cleanedWhy.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+      theWhyText.innerHTML = paragraphs.map(p => `<p class="the-why-paragraph">${p.replace(/\n/g, ' ')}</p>`).join('');
     } else {
       theWhyCard.style.display = 'none';
     }
@@ -409,8 +440,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateServerBadgeDisplay();
 
     videoPlayer.pause();
-    videoPlayer.src = videoUrl;
-    videoPlayer.load();
+    if (videoPlayer.getAttribute('src') !== videoUrl) {
+      videoPlayer.src = videoUrl;
+    }
 
     showView('viewWorkoutPlayer');
   }
@@ -466,69 +498,196 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Circuit Breakdown Renderer
+  // Circuit Breakdown Renderer with Rich Formatting & In-Frame Playable GIFs
   function renderCircuitBreakdown(text, container) {
-    // Decode HTML entities
-    const decoded = text.replace(/\\u000A/g, '\n').replace(/&amp;/g, '&');
-    const lines = decoded.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    container.innerHTML = '';
+    const cleaned = cleanText(text);
+    const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
     let currentBlock = null;
+    let currentExercisesList = null;
+    let blockCount = 0;
 
     lines.forEach(line => {
-      if (line.toLowerCase().startsWith('circuit') || line.toLowerCase().startsWith('round') || line.toLowerCase().startsWith('warm') || line.toLowerCase().startsWith('cool')) {
+      // Strip outer HTML tags to analyze text
+      const plain = line.replace(/<[^>]+>/g, '').trim();
+      if (!plain) return;
+
+      // 1. Check for Circuit / Section header
+      // e.g. "Circuit 1", "Round 1", "Warm Up", "Cool Down", "Block A", "Finisher"
+      const isCircuitHeader = /^(circuit\s*\d*|round\s*\d+|warm\s*up|cool\s*down|finisher|superset|tri-set|block\s*[a-z0-9]|emom|amrap)/i.test(plain);
+      
+      // 2. Check for Rounds/Sets prescription line
+      // e.g. "2 Rounds", "3 Sets", "Repeat 2 times"
+      const isRoundsPrescription = /^(\d+\s*(rounds?|sets?)|repeat\s*\d+\s*times?)/i.test(plain);
+
+      if (isCircuitHeader) {
+        blockCount++;
         currentBlock = document.createElement('div');
         currentBlock.className = 'circuit-block';
-        currentBlock.innerHTML = `<div class="circuit-header-title">${line.replace(/<[^>]+>/g, '')}</div>`;
-        container.appendChild(currentBlock);
-      } else {
-        if (!currentBlock) {
-          currentBlock = document.createElement('div');
-          currentBlock.className = 'circuit-block';
-          currentBlock.innerHTML = `<div class="circuit-header-title">Exercises</div>`;
-          container.appendChild(currentBlock);
-        }
-
-        const cleanLine = line.replace(/<[^>]+>/g, '').trim();
-        const parts = cleanLine.split(/—|-/);
-        const exName = parts[0].trim();
-        const exDetail = parts[1] ? parts[1].trim() : '';
-
-        // Search exercise in library for GIF
-        const matchedEx = findExerciseByName(exName);
-
-        const item = document.createElement('div');
-        item.className = 'circuit-exercise-item';
-        item.innerHTML = `
-          <div>
-            <strong>${exName}</strong>
-            ${exDetail ? `<span style="color:var(--mvn-gray-600); margin-left:0.5rem; font-size:0.85rem;">(${exDetail})</span>` : ''}
+        
+        const headerEl = document.createElement('div');
+        headerEl.className = 'circuit-header';
+        headerEl.innerHTML = `
+          <div class="circuit-header-left">
+            <span class="circuit-badge">Part ${blockCount}</span>
+            <h3 class="circuit-header-title">${plain}</h3>
           </div>
-          ${matchedEx ? `<button class="view-gif-btn" data-exid="${matchedEx.exerciseId}">Move GIF 🎬</button>` : ''}
+          <div class="circuit-rounds-badge" style="display:none;"></div>
         `;
+        currentBlock.appendChild(headerEl);
 
-        if (matchedEx) {
-          item.querySelector('.view-gif-btn').addEventListener('click', (e) => {
+        currentExercisesList = document.createElement('div');
+        currentExercisesList.className = 'circuit-exercises-list';
+        currentBlock.appendChild(currentExercisesList);
+
+        container.appendChild(currentBlock);
+        return;
+      }
+
+      if (isRoundsPrescription && currentBlock) {
+        const roundsBadge = currentBlock.querySelector('.circuit-rounds-badge');
+        if (roundsBadge) {
+          roundsBadge.textContent = plain;
+          roundsBadge.style.display = 'inline-block';
+        }
+        return;
+      }
+
+      // If exercise arrives before any header, create a default container
+      if (!currentBlock) {
+        blockCount++;
+        currentBlock = document.createElement('div');
+        currentBlock.className = 'circuit-block';
+        currentBlock.innerHTML = `
+          <div class="circuit-header">
+            <div class="circuit-header-left">
+              <span class="circuit-badge">Circuit</span>
+              <h3 class="circuit-header-title">Movements</h3>
+            </div>
+          </div>
+          <div class="circuit-exercises-list"></div>
+        `;
+        container.appendChild(currentBlock);
+        currentExercisesList = currentBlock.querySelector('.circuit-exercises-list');
+      }
+
+      // 3. Check for Rest interval
+      // e.g. "Rest — 20 seconds", "Rest 20 — seconds", "Rest"
+      const isRest = /^rest\b/i.test(plain);
+      if (isRest) {
+        const restDiv = document.createElement('div');
+        restDiv.className = 'circuit-rest-indicator';
+        const secMatch = plain.match(/\d+\s*(seconds?|s\b|secs?)/i);
+        const restTime = secMatch ? secMatch[0] : '20s';
+        restDiv.innerHTML = `
+          <div class="rest-left">
+            <span>☕</span>
+            <span>Rest &amp; Recovery</span>
+          </div>
+          <span class="rest-time">⏱️ ${restTime}</span>
+        `;
+        currentExercisesList.appendChild(restDiv);
+        return;
+      }
+
+      // 4. Exercise line: parse name and interval
+      const parts = plain.split(/—|-|–/);
+      const exName = parts[0].trim();
+      const exDetail = parts.length > 1 ? parts.slice(1).join(' - ').trim() : '';
+
+      const matchedEx = findExerciseByName(exName);
+      const gifUrl = matchedEx ? getGifUrl(matchedEx.gifUrl) : '';
+
+      const card = document.createElement('div');
+      card.className = 'circuit-exercise-card';
+
+      card.innerHTML = `
+        <div class="circuit-exercise-thumb-frame" title="Click for fullscreen demonstration">
+          ${gifUrl ? `
+            <img src="${gifUrl}" alt="${exName}" class="circuit-exercise-gif" loading="lazy" onerror="if(!this.dataset.retried){this.dataset.retried='1'; setTimeout(()=>{this.src='${gifUrl}';},1200);}else{this.onerror=null; this.src='assets/images/menovation-sq-purple-300.png';}">
+            <button class="expand-gif-overlay-btn" title="View Fullscreen Demo" data-exid="${matchedEx.exerciseId}">⛶</button>
+          ` : `
+            <div class="circuit-exercise-placeholder-icon">💪</div>
+          `}
+        </div>
+        <div class="circuit-exercise-info">
+          <div class="circuit-exercise-title-row">
+            <h4 class="circuit-exercise-name">${exName}</h4>
+            ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
+          </div>
+          <div class="circuit-exercise-meta">
+            ${matchedEx && matchedEx.usesWeights ? '<span class="badge badge-purple badge-xs">Weights</span>' : ''}
+            ${matchedEx && matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bands</span>' : ''}
+            ${matchedEx && !matchedEx.usesWeights && !matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bodyweight</span>' : ''}
+          </div>
+          ${matchedEx ? `
+            <button class="circuit-exercise-view-modal-btn" data-exid="${matchedEx.exerciseId}">
+              Form Cues &amp; Tips &rarr;
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      if (matchedEx) {
+        const expandBtn = card.querySelector('.expand-gif-overlay-btn');
+        if (expandBtn) {
+          expandBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openExerciseModal(matchedEx);
           });
         }
-
-        currentBlock.appendChild(item);
+        const modalBtn = card.querySelector('.circuit-exercise-view-modal-btn');
+        if (modalBtn) {
+          modalBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openExerciseModal(matchedEx);
+          });
+        }
+        const thumbFrame = card.querySelector('.circuit-exercise-thumb-frame');
+        if (thumbFrame) {
+          thumbFrame.addEventListener('click', () => openExerciseModal(matchedEx));
+        }
       }
+
+      currentExercisesList.appendChild(card);
     });
   }
 
   function findExerciseByName(name) {
     if (!exercisesData || !name) return null;
     const clean = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!clean) return null;
     const exercisesList = Object.values(exercisesData);
 
+    // 1. Exact cleaned match
     for (const ex of exercisesList) {
       const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (exClean === clean || exClean.includes(clean) || clean.includes(exClean)) {
-        return ex;
+      if (exClean === clean) return ex;
+    }
+
+    // 2. Substring inclusion match
+    for (const ex of exercisesList) {
+      const exClean = (ex.exerciseTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (exClean.includes(clean) || clean.includes(exClean)) return ex;
+    }
+
+    // 3. Word token overlap match (highest token score)
+    const words = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    let bestEx = null;
+    let bestScore = 0;
+    for (const ex of exercisesList) {
+      const exTitle = (ex.exerciseTitle || '').toLowerCase();
+      let score = 0;
+      for (const w of words) {
+        if (exTitle.includes(w)) score++;
+      }
+      if (score > bestScore && score >= 2) {
+        bestScore = score;
+        bestEx = ex;
       }
     }
-    return null;
+    return bestEx;
   }
 
   // --- 6. ALL WORKOUTS VIEW ---

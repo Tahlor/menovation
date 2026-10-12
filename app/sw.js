@@ -4,7 +4,7 @@
  * and Network-First for API requests with offline cache fallback.
  */
 
-const CACHE_NAME = 'menovation-offline-v2';
+const CACHE_NAME = 'menovation-offline-v4';
 
 const STATIC_PRECACHE_URLS = [
   './',
@@ -29,7 +29,7 @@ self.addEventListener('install', (event) => {
       return cache.addAll(STATIC_PRECACHE_URLS).catch((err) => {
         console.warn('[Service Worker] Some precache assets failed to load:', err);
       });
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -50,6 +50,17 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
+
+  // Bypass Service Worker completely for media streaming (videos, audio, Range requests, GIFs)
+  if (
+    event.request.headers.has('range') ||
+    event.request.destination === 'video' ||
+    event.request.destination === 'audio' ||
+    requestUrl.pathname.includes('/videos/') ||
+    requestUrl.pathname.includes('/gifs/')
+  ) {
+    return;
+  }
 
   // Cache-First for static assets (fonts, images, CSS, scripts, pre-bundled JSON)
   if (
