@@ -256,9 +256,10 @@
   }
 
   let lastSave = 0;
+  let playedThisLoad = false; // don't clobber saved state just because a workout page was opened
   function snapshotPosition(force) {
     const id = currentWorkoutIdFromHash();
-    if (!id || !video || !video.getAttribute('src')) return;
+    if (!id || !video || !video.getAttribute('src') || !playedThisLoad) return;
     const now = Date.now();
     if (!force && now - lastSave < 5000) return;
     lastSave = now;
@@ -279,6 +280,7 @@
   }
 
   if (video) {
+    video.addEventListener('play', () => { playedThisLoad = true; });
     video.addEventListener('timeupdate', () => { if (!video.paused) snapshotPosition(false); });
     video.addEventListener('pause', () => snapshotPosition(true));
     video.addEventListener('ended', () => { snapshotPosition(true); saveSession({ finished: true }); });

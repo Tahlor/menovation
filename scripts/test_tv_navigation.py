@@ -131,7 +131,8 @@ with sync_playwright() as p:
     page.keyboard.press("Enter"); page.wait_for_timeout(600)
     check("Resume AC3 opens workout", page.evaluate("location.hash") == f"#/workout/{wid2}")
 
-    # finished -> up next
+    # finished -> up next (leave the workout first so the live player does not re-save over our fixture)
+    page.evaluate("document.getElementById('workoutVideoPlayer').pause(); location.hash='#/programs'"); page.wait_for_timeout(400)
     page.evaluate("""(id) => localStorage.setItem('mvn_last_session', JSON.stringify(
         {workoutId:id, position:1490, duration:1500, finished:true}))""", wid2)
     page.goto(BASE + "?tv=1"); page.wait_for_selector("#resumeTileMain")

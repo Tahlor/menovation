@@ -108,17 +108,41 @@ public class MainActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent e) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (customView != null) { hideCustomView(); return true; }
-            String url = web.getUrl();
-            if (url != null && url.startsWith("file:///android_asset/pair.html")) {
-                finish(); return true;
-            }
-            web.evaluateJavascript("(function(){return window.mvnTvBack?window.mvnTvBack():false})()", value -> {
-                if (!"true".equals(value)) finish();
-            });
+            e.startTracking();
             return true;
         }
         return super.onKeyDown(keyCode, e);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent e) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && e.isTracking() && !e.isCanceled()) {
+            handleBackPress();
+            return true;
+        }
+        return super.onKeyUp(keyCode, e);
+    }
+
+    @Override
+    public void onBackPressed() {
+        handleBackPress();
+    }
+
+    private void handleBackPress() {
+        if (customView != null) {
+            hideCustomView();
+            return;
+        }
+        String url = web.getUrl();
+        if (url != null && url.startsWith("file:///android_asset/pair.html")) {
+            finish();
+            return;
+        }
+        web.evaluateJavascript("(function(){return window.mvnTvBack ? window.mvnTvBack() : false;})()", value -> {
+            if (!"true".equals(value)) {
+                finish();
+            }
+        });
     }
 
     @Override protected void onPause() { super.onPause(); CookieManager.getInstance().flush(); web.onPause(); }
