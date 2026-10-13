@@ -2062,3 +2062,35 @@ input[type="range"] {
   display: flex;
   justify-content: flex-end;
 }
+
+/* ===== D-pad / TV navigation & Resume tile (issues #1, #2) ===== */
+:focus { outline: none; }
+:focus-visible,
+.using-keys :focus {
+  outline: 4px solid #ffb703;
+  outline-offset: 3px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 8px rgba(119, 0, 83, 0.35);
+}
+.tv-mode .program-card:focus,
+.tv-mode .workout-card:focus,
+.tv-mode .exercise-card:focus,
+.tv-mode .program-workout-item:focus { transform: scale(1.03); transition: transform .12s ease; }
+
+.resume-row { display: flex; gap: 1rem; margin: 0 0 1.5rem; flex-wrap: wrap; }
+.resume-tile {
+  display: flex; align-items: center; gap: 1rem; flex: 2 1 320px; cursor: pointer;
+  padding: 1rem 1.25rem; border-radius: 14px; color: #fff;
+  background: linear-gradient(135deg, #770053, #a8227d);
+}
+.resume-tile-secondary { flex: 1 1 200px; background: #3d3d3d; }
+.resume-play { font-size: 2rem; width: 3.2rem; height: 3.2rem; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; }
+.resume-kicker { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; opacity: .85; }
+.resume-title { font-size: 1.25rem; font-weight: 700; }
+.resume-sub { font-size: .9rem; opacity: .85; }
+
+.tv-mode body { font-size: 20px; }
+.tv-mode .main-container, .tv-mode .app-header, .tv-mode .main-tabs-bar { padding-left: 48px; padding-right: 48px; }
+.tv-mode .app-footer { display: none; }
+.tv-mode .nav-tab, .tv-mode .filter-pill, .tv-mode .btn { font-size: 1.1rem; padding-top: .7rem; padding-bottom: .7rem; }
+.tv-mode body, .tv-mode { cursor: none; }

@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.taylorarchibald.menovation'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.taylorarchibald.menovation'
+        minSdk 22          // Fire OS 5+ (Fire TV Stick Gen 1 and later)
+        targetSdk 33
+        versionCode 1
+        versionName '1.0'
+        buildConfigField 'String', 'APP_URL', '"https://data.taylorarchibald.com/menovation/"'
+        buildConfigField 'String', 'SSO_HOST', '"taylorarchibald.com"'
+    }
+    buildFeatures { buildConfig true }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    buildTypes { release { minifyEnabled false } }
+}

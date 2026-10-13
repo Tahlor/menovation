@@ -18,5 +18,22 @@ Thumbs.db
 *.swp
 *.swo
 
-# Logs
+# Logs & State
 *.log
+assets/*.log
+assets/*_state.json
+
+# Heavy Media & Downloaded Scrapes (keep repo trimmed to code & core UI assets)
+assets/media/
+assets/videos
+assets/workouts/
+assets/raw/
+
+# Android Build Outputs
+.gradle/
+build/
+android/app/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.aab

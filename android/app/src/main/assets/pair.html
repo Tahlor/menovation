@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menovation – Sign in</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #770053; color: #fff; font-family: "Nunito Sans", Arial, sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; }
+  .card { text-align: center; max-width: 900px; padding: 0 48px; display: flex; gap: 56px; align-items: center; }
+  .qr { background: #fff; padding: 18px; border-radius: 18px; line-height: 0; }
+  .qr svg, .qr img { width: 320px; height: 320px; }
+  h1 { font-size: 2.2rem; margin: 0 0 .6rem; }
+  p { font-size: 1.25rem; line-height: 1.5; opacity: .92; margin: .4rem 0; }
+  .code { font-size: 3rem; letter-spacing: .25em; font-weight: 800; margin: 1rem 0; color: #ffb703; }
+  #status { min-height: 1.6em; font-size: 1.1rem; }
+  .actions { margin-top: 1.4rem; display: flex; gap: 1rem; justify-content: flex-start; }
+  button { font-size: 1.2rem; padding: .8rem 1.4rem; border-radius: 12px; border: 0; background: #fff; color: #770053; font-weight: 700; }
+  button:focus { outline: 4px solid #ffb703; outline-offset: 3px; }
+  .left { text-align: left; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="qr" id="qr" aria-label="QR code"></div>
+  <div class="left">
+    <h1>Sign in with your phone</h1>
+    <p>Scan the QR code, or go to <strong id="uri"></strong> and enter:</p>
+    <div class="code" id="code">····</div>
+    <div id="status">Starting…</div>
+    <div class="actions">
+      <button id="newCode" autofocus>New code</button>
+      <button id="usePassword">Use password instead</button>
+    </div>
+  </div>
+</div>
+<script src="qrcode.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var API = (q.get('api') || 'https://taylorarchibald.com').replace(/\/+$/, '');
+  var RETURN = q.get('return') || 'https://data.taylorarchibald.com/menovation/';
+  var LOGIN = q.get('login');
+  var $ = function (id) { return document.getElementById(id); };
+  var timer = null, session = 0, backoff = 2000;
+
+  function setStatus(t) { $('status').textContent = t; }
+
+  function drawQr(text) {
+    var qr = qrcode(0, 'M');
+    qr.addData(text); qr.make();
+    $('qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+  }
+
+  function post(path, body) {
+    return fetch(API + path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  function start() {
+    clearTimeout(timer);
+    var mine = ++session;
+    setStatus('Requesting a code…');
+    post('/sso/device/start', { client: 'menovation-firetv' }).then(function (d) {
+      if (mine !== session) return;
+      backoff = 2000;
+      $('code').textContent = d.user_code;
+      $('uri').textContent = (d.verification_uri || '').replace(/^https?:\/\//, '');
+      drawQr(d.verification_uri_complete || d.verification_uri);
+      setStatus('Waiting for approval…');
+      var interval = Math.max(2, d.interval || 3) * 1000;
+      var expiresAt = Date.now() + (d.expires_in || 600) * 1000;
+      (function poll() {
+        timer = setTimeout(function () {
+          if (mine !== session) return;
+          if (Date.now() > expiresAt) { setStatus('Code expired – getting a new one…'); return start(); }
+          post('/sso/device/poll', { device_code: d.device_code }).then(function (r) {
+            if (mine !== session) return;
+            if (r.status === 'approved' && r.redeem_token) {
+              setStatus('Approved! Signing in…');
+              location.href = API + '/sso/device/redeem?token=' + encodeURIComponent(r.redeem_token) +
+                              '&return_url=' + encodeURIComponent(RETURN);
+            } else if (r.status === 'expired' || r.status === 'denied') {
+              setStatus(r.status === 'denied' ? 'Denied – getting a new code…' : 'Code expired – getting a new one…');
+              start();
+            } else { poll(); }
+          }).catch(function () { setStatus('Network problem – retrying…'); poll(); });
+        }, interval);
+      })();
+    }).catch(function (e) {
+      if (mine !== session) return;
+      setStatus('Can\u2019t reach the sign-in server (' + e.message + '). Retrying…');
+      backoff = Math.min(backoff * 2, 30000);
+      timer = setTimeout(start, backoff);
+    });
+  }
+
+  $('newCode').addEventListener('click', start);
+  $('usePassword').addEventListener('click', function () { if (LOGIN) location.href = LOGIN + (LOGIN.indexOf('?') < 0 ? '?' : '&') + 'password=1'; });
+  document.addEventListener('keydown', function (e) {
+    var b = [$('newCode'), $('usePassword')], i = b.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { b[(i + 1) % 2].focus(); e.preventDefault(); }
+  });
+  window.__pair = { start: start };
+  start();
+})();
+</script>
+</body>
+</html>
