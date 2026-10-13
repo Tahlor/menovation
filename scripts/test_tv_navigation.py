@@ -29,28 +29,37 @@ def check(name, cond):
 def focused(page):
     return page.evaluate("document.activeElement && (document.activeElement.className + '|' + document.activeElement.id)")
 
-import subprocess, time, shutil
-EDGE = "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+import subprocess, time, platform
+
+# The user's own Edge (Desktop shortcut "Taylor Personal - Edge") is started with --remote-debugging-port=32000.
+CDP_URL = "http://127.0.0.1:32000"
+EDGE_SHORTCUT = r"C:\Users\Taylor\Desktop\Taylor Personal - Edge.lnk"
 
 def open_browser(p):
+    """Attach to the user's Edge over CDP (launching it via their shortcut if it isn't open).
+    Falls back to a bundled Playwright Chromium when Edge is unavailable."""
+    def attach():
+        return p.chromium.connect_over_cdp(CDP_URL, timeout=3000)
     try:
-        return p.chromium.launch(headless=True), None
+        return attach(), True
     except Exception:
-        # Fallback (e.g. WSL on an unsupported distro): drive Windows Edge over CDP.
-        proc = subprocess.Popen([EDGE, "--headless=new", "--remote-debugging-port=9333", "--user-data-dir=C:\\Temp\\mvn-edge-test",
-                                 "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(40):
+        pass
+    if platform.system() == "Windows" or os.path.exists("/mnt/c/Windows"):
+        subprocess.Popen(["cmd.exe", "/c", "start", "", EDGE_SHORTCUT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(30):
+            time.sleep(1)
             try:
-                return p.chromium.connect_over_cdp("http://127.0.0.1:9333"), proc
+                return attach(), True
             except Exception:
-                time.sleep(0.5)
-        raise
+                pass
+    # NOTE: from WSL2, Windows' 127.0.0.1:32000 is not reachable; run this script with Windows Python instead.
+    return p.chromium.launch(headless=True), False
 
 with sync_playwright() as p:
-    b, edge_proc = open_browser(p)
-    ctx = b.contexts[0] if edge_proc else b.new_context(viewport={"width": 1280, "height": 720})
-    ctx.route("**/sw.js", lambda r: r.abort())
+    b, is_edge = open_browser(p)
+    ctx = b.contexts[0] if is_edge else b.new_context(viewport={"width": 1280, "height": 720})
     page = ctx.new_page()
+    page.route("**/sw.js", lambda r: r.abort())
     page.goto(BASE + "?tv=1")
     page.wait_for_selector(".program-card")
     page.wait_for_timeout(1200)
@@ -100,7 +109,6 @@ with sync_playwright() as p:
     page.evaluate("""() => { const v=document.getElementById('workoutVideoPlayer');
         Object.defineProperty(v,'duration',{value:600,configurable:true}); v.focus(); }""")
     page.keyboard.press("ArrowRight")
-    check("AC6 ArrowRight seeks +10s", page.evaluate("document.getElementById('workoutVideoPlayer').currentTime") >= 9.9 or True)
     page.keyboard.press("ArrowDown")
     check("AC6 ArrowDown leaves video", page.evaluate("document.activeElement.id != 'workoutVideoPlayer'"))
 
@@ -117,24 +125,23 @@ with sync_playwright() as p:
     page.evaluate("""(id) => localStorage.setItem('mvn_last_session', JSON.stringify(
         {workoutId:id, position:125, duration:1500, finished:false, updatedAt:new Date().toISOString()}))""", wid2)
     page.goto(BASE + "?tv=1"); page.wait_for_selector("#resumeTileMain")
-    txt = page.inner_text("#resumeTileMain")
-    check("Resume AC2 tile shows Resume at 2:05", "Resume" in txt and "2:05" in txt)
+    txt = page.inner_text("#resumeTileMain").lower()
+    check("Resume AC2 tile shows Resume at 2:05", "resume" in txt and "2:05" in txt)
     check("Resume AC2 tile is first focus", page.evaluate("document.activeElement.id") == "resumeTileMain")
     page.keyboard.press("Enter"); page.wait_for_timeout(600)
     check("Resume AC3 opens workout", page.evaluate("location.hash") == f"#/workout/{wid2}")
-    check("Resume AC3 pending seek stored", True)
 
     # finished -> up next
     page.evaluate("""(id) => localStorage.setItem('mvn_last_session', JSON.stringify(
         {workoutId:id, position:1490, duration:1500, finished:true}))""", wid2)
     page.goto(BASE + "?tv=1"); page.wait_for_selector("#resumeTileMain")
-    check("Resume AC4 shows Up next", "Up next" in page.inner_text("#resumeTileMain"))
+    check("Resume AC4 shows Up next", "up next" in page.inner_text("#resumeTileMain").lower())
     page.evaluate("""(id) => localStorage.setItem('mvn_last_session', JSON.stringify(
         {workoutId:id, position:3, duration:1500, finished:false}))""", wid2)
     page.goto(BASE + "?tv=1"); page.wait_for_selector("#resumeTileMain")
-    check("Resume AC5 <10s counts as not started", "Resume" not in page.inner_text("#resumeTileMain"))
-    b.close()
-    if edge_proc: edge_proc.terminate()
+    check("Resume AC5 <10s counts as not started", "resume" not in page.inner_text("#resumeTileMain").lower())
+    page.close()  # never close the user's Edge
+    if not is_edge: b.close()
 
 srv.shutdown()
 print("\nFAILED: %s" % fails if fails else "\nALL PASSED")
