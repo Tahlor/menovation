@@ -119,10 +119,63 @@
 
       <div class="workout-player-container">
         <!-- Video Player Wrapper -->
-        <div class="video-wrapper">
+        <div class="video-wrapper" id="workoutVideoWrapper">
+          <!-- Mini-Player Header (visible in mini-player popout mode) -->
+          <div class="mini-player-header" id="miniPlayerHeader" style="display: none;">
+            <div class="mini-player-title-box" id="miniPlayerTitleBox" title="Return to workout">
+              <span class="mini-player-badge">PLAYING</span>
+              <span class="mini-player-title-text" id="miniPlayerWorkoutTitle">Workout Title</span>
+            </div>
+            <div class="mini-player-actions">
+              <button class="mini-player-action-btn" id="miniPlayerExpandBtn" title="Return to full workout" aria-label="Expand workout view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                </svg>
+              </button>
+              <button class="mini-player-action-btn mini-player-close-btn" id="miniPlayerCloseBtn" title="Close and exit video" aria-label="Exit video">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
           <video id="workoutVideoPlayer" controls playsinline preload="metadata">
             Your browser does not support the video tag.
           </video>
+
+          <!-- Mini-Player Controls Bar (visible in mini-player popout mode) -->
+          <div class="mini-player-controls-bar" id="miniPlayerControlsBar" style="display: none;">
+            <div class="mini-player-scrubber-row">
+              <input type="range" class="mini-player-scrubber" id="miniPlayerScrubber" min="0" max="100" value="0" step="0.1" aria-label="Seek video">
+            </div>
+            <div class="mini-player-buttons-row">
+              <button class="mini-ctrl-btn" id="miniPlayPauseBtn" title="Play / Pause" aria-label="Play/Pause">
+                <svg id="miniPlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <svg id="miniPauseIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              </button>
+              <button class="mini-ctrl-btn mini-skip-btn" id="miniSkipBackBtn" title="-10 seconds" aria-label="-10 seconds">
+                -10s
+              </button>
+              <button class="mini-ctrl-btn mini-skip-btn" id="miniSkipForwardBtn" title="+10 seconds" aria-label="+10 seconds">
+                +10s
+              </button>
+              <span class="mini-time-display" id="miniTimeDisplay">0:00 / 0:00</span>
+              <div class="mini-ctrl-spacer"></div>
+              <button class="mini-ctrl-btn" id="miniPipBtn" title="Picture in Picture" aria-label="Picture in picture" style="display: none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <rect x="12" y="10" width="8" height="8" rx="1"></rect>
+                </svg>
+              </button>
+            </div>
+          </div>
           
           <div class="video-source-info" id="videoSourceInfo">
             <span id="videoCurrentSourceBadge">Streaming from Pi3</span>
@@ -143,6 +196,7 @@
           <div class="skip-buttons">
             <button class="btn btn-sm btn-secondary" id="skipBackBtn">-10s</button>
             <button class="btn btn-sm btn-secondary" id="skipForwardBtn">+10s</button>
+            <button class="btn btn-sm btn-secondary" id="pipBtn" title="Picture in Picture" style="display: none;">PiP ⧉</button>
             <button class="btn btn-sm btn-primary" id="fullscreenBtn">Fullscreen ⛶</button>
           </div>
         </div>
@@ -150,11 +204,11 @@
         <!-- Workout Header & Completion -->
         <div class="workout-header-card">
           <div class="workout-title-row">
-            <div>
+            <div class="workout-title-left">
               <span class="badge badge-purple" id="playerProgramBadge">Program</span>
               <h1 id="playerWorkoutTitle" class="workout-player-title">Workout Title</h1>
             </div>
-            <button class="btn btn-success" id="markCompleteBtn">
+            <button class="btn btn-success btn-complete-workout" id="markCompleteBtn">
               ✓ Mark Complete
             </button>
           </div>
@@ -407,6 +461,25 @@
               </div>
             </label>
           </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--mvn-light-sand); padding-top: 1.25rem;">
+          <label>When Navigating Away During Video Playback:</label>
+          <label class="server-option">
+            <input type="radio" name="navVideoBehavior" value="popout" checked>
+            <div class="server-option-text">
+              <strong>Pop Out Mini-Player (Recommended)</strong>
+              <span>Continues playing in a corner popout with video, controls, return, and exit button</span>
+            </div>
+          </label>
+
+          <label class="server-option">
+            <input type="radio" name="navVideoBehavior" value="pause">
+            <div class="server-option-text">
+              <strong>Pause Video Automatically</strong>
+              <span>Immediately pauses video and stops background playback upon navigation</span>
+            </div>
+          </label>
         </div>
 
         <div class="test-connection-box">

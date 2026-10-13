@@ -98,13 +98,111 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Video Player Elements
   const videoPlayer = document.getElementById('workoutVideoPlayer');
+  const videoWrapper = document.getElementById('workoutVideoWrapper');
+  const videoSourceInfo = document.getElementById('videoSourceInfo');
   const videoCurrentSourceBadge = document.getElementById('videoCurrentSourceBadge');
   const changeSourceQuickBtn = document.getElementById('changeSourceQuickBtn');
   const skipBackBtn = document.getElementById('skipBackBtn');
   const skipForwardBtn = document.getElementById('skipForwardBtn');
+  const pipBtn = document.getElementById('pipBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const speedPills = document.querySelectorAll('.speed-pill');
   const markCompleteBtn = document.getElementById('markCompleteBtn');
+
+  // Mini-Player Elements
+  const miniPlayerHeader = document.getElementById('miniPlayerHeader');
+  const miniPlayerTitleBox = document.getElementById('miniPlayerTitleBox');
+  const miniPlayerWorkoutTitle = document.getElementById('miniPlayerWorkoutTitle');
+  const miniPlayerExpandBtn = document.getElementById('miniPlayerExpandBtn');
+  const miniPlayerCloseBtn = document.getElementById('miniPlayerCloseBtn');
+  const miniPlayerControlsBar = document.getElementById('miniPlayerControlsBar');
+  const miniPlayerScrubber = document.getElementById('miniPlayerScrubber');
+  const miniPlayPauseBtn = document.getElementById('miniPlayPauseBtn');
+  const miniPlayIcon = document.getElementById('miniPlayIcon');
+  const miniPauseIcon = document.getElementById('miniPauseIcon');
+  const miniSkipBackBtn = document.getElementById('miniSkipBackBtn');
+  const miniSkipForwardBtn = document.getElementById('miniSkipForwardBtn');
+  const miniTimeDisplay = document.getElementById('miniTimeDisplay');
+  const miniPipBtn = document.getElementById('miniPipBtn');
+
+  // Mini-Player State
+  let isMiniPlayerActive = false;
+  let isScrubbingMini = false;
+
+  function getNavVideoBehavior() {
+    return localStorage.getItem('mvn_nav_video_behavior') || 'popout';
+  }
+
+  function formatTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
+  function updateMiniPlayerPlayPauseUI() {
+    if (!videoPlayer) return;
+    const isPaused = videoPlayer.paused || videoPlayer.ended;
+    if (miniPlayIcon) miniPlayIcon.style.display = isPaused ? 'block' : 'none';
+    if (miniPauseIcon) miniPauseIcon.style.display = isPaused ? 'none' : 'block';
+  }
+
+  function enterMiniPlayer() {
+    if (!videoPlayer || !currentWorkout) return;
+    isMiniPlayerActive = true;
+    if (views.viewWorkoutPlayer) {
+      views.viewWorkoutPlayer.classList.add('in-mini-mode');
+      views.viewWorkoutPlayer.style.display = 'block';
+    }
+
+    videoPlayer.controls = false;
+    if (miniPlayerHeader) miniPlayerHeader.style.display = 'flex';
+    if (miniPlayerControlsBar) miniPlayerControlsBar.style.display = 'flex';
+    if (videoSourceInfo) videoSourceInfo.style.display = 'none';
+
+    if (miniPlayerWorkoutTitle) {
+      miniPlayerWorkoutTitle.textContent = currentWorkout.title || 'Workout';
+    }
+
+    updateMiniPlayerPlayPauseUI();
+    const cur = videoPlayer.currentTime || 0;
+    const dur = videoPlayer.duration || 0;
+    if (miniPlayerScrubber && dur > 0) {
+      miniPlayerScrubber.value = (cur / dur) * 100;
+    }
+    if (miniTimeDisplay) {
+      miniTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+    }
+  }
+
+  function exitMiniPlayer(shouldPause = false) {
+    if (shouldPause && videoPlayer) {
+      videoPlayer.pause();
+    }
+    isMiniPlayerActive = false;
+    if (views.viewWorkoutPlayer) {
+      views.viewWorkoutPlayer.classList.remove('in-mini-mode');
+    }
+    if (videoPlayer) {
+      videoPlayer.controls = true;
+    }
+    if (miniPlayerHeader) miniPlayerHeader.style.display = 'none';
+    if (miniPlayerControlsBar) miniPlayerControlsBar.style.display = 'none';
+    if (videoSourceInfo) videoSourceInfo.style.display = 'flex';
+  }
+
+  function dismissMiniPlayer() {
+    exitMiniPlayer(true);
+    if (views.viewWorkoutPlayer) {
+      views.viewWorkoutPlayer.style.display = 'none';
+    }
+  }
+
+  function returnToWorkoutView() {
+    if (currentWorkout) {
+      navigateTo('#/workout/' + currentWorkout.workoutPostId);
+    }
+  }
 
   // Modals
   const exerciseModal = document.getElementById('exerciseModal');
@@ -142,11 +240,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 1. VIEW SWITCHING & ROUTING ---
   function showView(viewId) {
-    Object.keys(views).forEach(key => {
-      if (views[key]) {
-        views[key].style.display = (key === viewId) ? 'block' : 'none';
+    const isVideoPlaying = videoPlayer && !videoPlayer.paused && !videoPlayer.ended && videoPlayer.currentTime > 0;
+    const navBehavior = getNavVideoBehavior();
+
+    if (viewId === 'viewWorkoutPlayer') {
+      // Returning to full player
+      exitMiniPlayer(false);
+      Object.keys(views).forEach(key => {
+        if (views[key]) {
+          views[key].style.display = (key === viewId) ? 'block' : 'none';
+        }
+      });
+    } else {
+      // Navigating away from workout player
+      if (navBehavior === 'pause') {
+        if (videoPlayer) videoPlayer.pause();
+        dismissMiniPlayer();
+        Object.keys(views).forEach(key => {
+          if (views[key]) {
+            views[key].style.display = (key === viewId) ? 'block' : 'none';
+          }
+        });
+      } else {
+        if (isVideoPlaying || isMiniPlayerActive) {
+          enterMiniPlayer();
+          Object.keys(views).forEach(key => {
+            if (key === 'viewWorkoutPlayer') {
+              views[key].style.display = 'block';
+            } else {
+              views[key].style.display = (key === viewId) ? 'block' : 'none';
+            }
+          });
+        } else {
+          exitMiniPlayer(false);
+          Object.keys(views).forEach(key => {
+            if (views[key]) {
+              views[key].style.display = (key === viewId) ? 'block' : 'none';
+            }
+          });
+        }
       }
-    });
+    }
 
     navTabs.forEach(tab => {
       if (tab.dataset.view === viewId) {
@@ -424,14 +558,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="workout-order-circle ${isDone ? 'completed' : ''}">
             ${isDone ? '✓' : index + 1}
           </div>
-          <div>
+          <div class="workout-item-text">
             <div class="workout-item-title">${w.title}</div>
-            <div class="workout-item-subtitle">⏱️ ${w.duration} Minutes &bull; ${w.videoCategory || 'Workout'}</div>
+            <div class="workout-item-subtitle">⏱️ ${w.duration} Min &bull; ${w.videoCategory || 'Workout'}</div>
           </div>
         </div>
-        <button class="btn btn-secondary btn-sm">
-          ${isDone ? 'Replay Workout' : 'Start Workout ▶'}
-        </button>
+        <div class="workout-action-pill ${isDone ? 'completed' : ''}">
+          ${isDone ? 'Replay ▶' : 'Start ▶'}
+        </div>
       `;
 
       row.addEventListener('click', () => navigateTo('#/workout/' + w.workoutPostId));
@@ -448,6 +582,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function renderWorkoutPlayerView(workoutId) {
     console.log('[DEBUG] renderWorkoutPlayerView called with workoutId:', workoutId);
+
+    // If already watching this workout in mini-player mode, seamlessly expand back to full mode
+    const isSameWorkout = currentWorkout && String(currentWorkout.workoutPostId) === String(workoutId);
+    if (isSameWorkout && isMiniPlayerActive) {
+      exitMiniPlayer(false); // don't pause!
+      showView('viewWorkoutPlayer');
+      return;
+    }
+
     currentWorkout = workoutsIndex ? workoutsIndex[String(workoutId)] : null;
     console.log('[DEBUG] currentWorkout found:', currentWorkout ? currentWorkout.title : 'NOT FOUND');
     if (!currentWorkout) {
@@ -520,8 +663,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const videoUrl = getVideoUrl(currentWorkout.videoFilename);
     updateServerBadgeDisplay();
 
-    videoPlayer.pause();
     if (videoPlayer.getAttribute('src') !== videoUrl) {
+      videoPlayer.pause();
       videoPlayer.src = videoUrl;
     }
 
@@ -577,6 +720,132 @@ document.addEventListener('DOMContentLoaded', async () => {
       videoPlayer.playbackRate = speed;
     });
   });
+
+  // Picture in picture button for main workout player
+  if (document.pictureInPictureEnabled && pipBtn) {
+    pipBtn.style.display = 'inline-block';
+    pipBtn.addEventListener('click', async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (videoPlayer) {
+          await videoPlayer.requestPictureInPicture();
+        }
+      } catch (err) {
+        console.warn('PiP error:', err);
+      }
+    });
+  }
+
+  // Mini-Player Control Event Listeners
+  if (miniPlayerExpandBtn) {
+    miniPlayerExpandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      returnToWorkoutView();
+    });
+  }
+  if (miniPlayerTitleBox) {
+    miniPlayerTitleBox.addEventListener('click', (e) => {
+      e.stopPropagation();
+      returnToWorkoutView();
+    });
+  }
+  if (miniPlayerCloseBtn) {
+    miniPlayerCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismissMiniPlayer();
+    });
+  }
+
+  function togglePlayPause() {
+    if (!videoPlayer) return;
+    if (videoPlayer.paused || videoPlayer.ended) {
+      if (videoPlayer.ended) videoPlayer.currentTime = 0;
+      videoPlayer.play();
+    } else {
+      videoPlayer.pause();
+    }
+  }
+
+  if (miniPlayPauseBtn) {
+    miniPlayPauseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePlayPause();
+    });
+  }
+
+  if (miniSkipBackBtn) {
+    miniSkipBackBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (videoPlayer) videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+    });
+  }
+
+  if (miniSkipForwardBtn) {
+    miniSkipForwardBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (videoPlayer) videoPlayer.currentTime = Math.min(videoPlayer.duration || 9999, videoPlayer.currentTime + 10);
+    });
+  }
+
+  if (document.pictureInPictureEnabled && miniPipBtn) {
+    miniPipBtn.style.display = 'inline-flex';
+    miniPipBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (videoPlayer) {
+          await videoPlayer.requestPictureInPicture();
+        }
+      } catch (err) {
+        console.warn('Mini PiP error:', err);
+      }
+    });
+  }
+
+  if (videoPlayer) {
+    videoPlayer.addEventListener('play', updateMiniPlayerPlayPauseUI);
+    videoPlayer.addEventListener('pause', updateMiniPlayerPlayPauseUI);
+    videoPlayer.addEventListener('ended', updateMiniPlayerPlayPauseUI);
+
+    videoPlayer.addEventListener('click', () => {
+      if (isMiniPlayerActive) {
+        togglePlayPause();
+      }
+    });
+
+    videoPlayer.addEventListener('timeupdate', () => {
+      if (isMiniPlayerActive && !isScrubbingMini) {
+        const cur = videoPlayer.currentTime || 0;
+        const dur = videoPlayer.duration || 0;
+        if (dur > 0 && miniPlayerScrubber) {
+          miniPlayerScrubber.value = (cur / dur) * 100;
+        }
+        if (miniTimeDisplay) {
+          miniTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+        }
+      }
+    });
+  }
+
+  if (miniPlayerScrubber) {
+    miniPlayerScrubber.addEventListener('input', () => {
+      isScrubbingMini = true;
+      const dur = videoPlayer ? (videoPlayer.duration || 0) : 0;
+      const targetTime = (miniPlayerScrubber.value / 100) * dur;
+      if (miniTimeDisplay) {
+        miniTimeDisplay.textContent = `${formatTime(targetTime)} / ${formatTime(dur)}`;
+      }
+    });
+    miniPlayerScrubber.addEventListener('change', () => {
+      if (videoPlayer) {
+        const dur = videoPlayer.duration || 0;
+        videoPlayer.currentTime = (miniPlayerScrubber.value / 100) * dur;
+      }
+      isScrubbingMini = false;
+    });
+  }
 
   // --- EXERCISE NORMALIZER & SYNONYM ENGINE ---
   const EXERCISE_ALIASES = {
@@ -916,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="meta-chip">${w.equipment.length ? w.equipment[0].itemTitle : 'Bodyweight'}</span>
         </div>
         <div class="workout-card-footer">
-          <button class="btn btn-secondary btn-sm" style="width: 100%;">Play Workout ▶</button>
+          <button class="workout-card-play-btn">Play Workout ▶</button>
         </div>
       `;
       card.dataset.workoutId = String(w.workoutPostId);
@@ -1034,11 +1303,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 9. SETTINGS MODAL & MEDIA SERVER SWITCHING ---
   function openSettingsModal() {
-    // Select current radio
+    // Select current media server radio
     const radios = document.querySelectorAll('input[name="mediaServerChoice"]');
     radios.forEach(r => {
       if (r.value === mediaConfig.choice) r.checked = true;
     });
+
+    // Select navigation video behavior radio
+    const behavior = getNavVideoBehavior();
+    const behaviorRadios = document.querySelectorAll('input[name="navVideoBehavior"]');
+    behaviorRadios.forEach(r => {
+      if (r.value === behavior) r.checked = true;
+    });
+
     customServerInput.value = mediaConfig.customUrl || '';
     testServerResult.textContent = '';
     settingsModal.style.display = 'flex';
@@ -1056,6 +1333,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selected = document.querySelector('input[name="mediaServerChoice"]:checked').value;
     mediaConfig.choice = selected;
     mediaConfig.customUrl = customServerInput.value.trim();
+
+    const selectedBehavior = document.querySelector('input[name="navVideoBehavior"]:checked')?.value || 'popout';
+    localStorage.setItem('mvn_nav_video_behavior', selectedBehavior);
 
     localStorage.setItem('mvn_media_choice', mediaConfig.choice);
     localStorage.setItem('mvn_media_custom', mediaConfig.customUrl);
@@ -1133,7 +1413,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const logs = await window.mvnDB.getAll('symptom_logs');
 
     if (logs.length === 0) {
-      container.innerHTML = '<p style="color:var(--mvn-gray-600); font-style:italic;">No diary entries logged yet.</p>';
+      container.innerHTML = `
+        <div class="diary-empty-state">
+          <span class="empty-icon">📓</span>
+          <h4>No Diary Entries Yet</h4>
+          <p>Track your daily symptoms, sleep quality, and mood using the form on the left. Entries are kept securely on your device.</p>
+        </div>
+      `;
       return;
     }
 
