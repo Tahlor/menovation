@@ -529,6 +529,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // --- USER DATA SERVER SYNC (Archimedes / SSO) ---
+  const USER_DATA_ENDPOINT = '/sso/menovation/user-data';
+  let syncUpTimeout = null;
+
+  async function syncUserDataFromServer() {
+    try {
+      const resp = await fetch(USER_DATA_ENDPOINT, { credentials: 'include' });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (!data) return;
+
+      const serverUser = data.username || null;
+      const lastUser = localStorage.getItem('mvn_synced_user');
+
+      // If user switched on same device, clear previous user's local caches
+      if (serverUser && lastUser && lastUser !== serverUser) {
+        console.log(`[UserSync] Switching user from ${lastUser} to ${serverUser}, refreshing local data`);
+        await window.mvnDB.clear('completed_workouts');
+        await window.mvnDB.clear('symptom_logs');
+        localStorage.removeItem('mvn_last_session');
+      }
+      if (serverUser) {
+        localStorage.setItem('mvn_synced_user', serverUser);
+      }
+
+      // 1. Completed Workouts
+      let hasNewCompleted = false;
+      if (Array.isArray(data.completedWorkouts)) {
+        const local = await window.mvnDB.getAll('completed_workouts');
+        const localMap = new Map(local.map(w => [String(w.workoutId), w]));
+        for (const item of data.completedWorkouts) {
+          if (!localMap.has(String(item.workoutId))) {
+            await window.mvnDB.put('completed_workouts', item);
+            hasNewCompleted = true;
+          }
+        }
+      }
+
+      // 2. Diary Logs
+      let hasNewDiary = false;
+      if (Array.isArray(data.diary)) {
+        const localLogs = await window.mvnDB.getAll('symptom_logs');
+        const localTimestamps = new Set(localLogs.map(l => l.createdAt || l.date));
+        for (const log of data.diary) {
+          const key = log.createdAt || log.date;
+          if (!localTimestamps.has(key)) {
+            await window.mvnDB.put('symptom_logs', log);
+            hasNewDiary = true;
+          }
+        }
+      }
+
+      // 3. Resume State
+      if (data.resume && data.resume.updatedAt) {
+        try {
+          const localResume = JSON.parse(localStorage.getItem('mvn_last_session'));
+          if (!localResume || !localResume.updatedAt || new Date(data.resume.updatedAt) > new Date(localResume.updatedAt)) {
+            localStorage.setItem('mvn_last_session', JSON.stringify(data.resume));
+            if (window.mvnRenderResumeTile) window.mvnRenderResumeTile();
+          }
+        } catch (_) {}
+      }
+
+      // Refresh views if new data was synced from server
+      if (hasNewCompleted) renderAllWorkoutsList();
+      if (hasNewDiary) loadDiaryHistory();
+
+      // Ensure server has any items that were only recorded locally (e.g. while offline)
+      pushUserDataToServer();
+    } catch (_) {
+      // Offline or server not ready - graceful fallback
+    }
+  }
+
+  async function pushUserDataToServer() {
+    try {
+      const [completed, diary] = await Promise.all([
+        window.mvnDB.getAll('completed_workouts'),
+        window.mvnDB.getAll('symptom_logs')
+      ]);
+      let resume = null;
+      try { resume = JSON.parse(localStorage.getItem('mvn_last_session')); } catch (_) {}
+
+      await fetch(USER_DATA_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          updatedAt: new Date().toISOString(),
+          completedWorkouts: completed,
+          diary: diary,
+          resume: resume
+        })
+      });
+    } catch (_) {
+      // Offline fallback
+    }
+  }
+
+  window.mvnPushUserData = pushUserDataToServer;
+  window.mvnSyncUpDebounced = function() {
+    if (syncUpTimeout) clearTimeout(syncUpTimeout);
+    syncUpTimeout = setTimeout(pushUserDataToServer, 2000);
+  };
+
   // --- 2. DATA FETCHING ---
   async function loadInitialData() {
     try {
@@ -549,6 +654,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Dispatch route from initial URL hash
       await handleHashRouting();
+
+      // Seamlessly sync user state (completed workouts, diary, resume) from Archimedes SSO
+      await syncUserDataFromServer();
     } catch (err) {
       console.error('Failed to load local app data catalogs:', err);
     }
@@ -669,7 +777,78 @@ document.addEventListener('DOMContentLoaded', async () => {
       programWorkouts = Object.values(workoutsIndex).filter(w => w.programPostId === parseInt(pid));
     }
 
-    workoutCountBadge.textContent = `${programWorkouts.length} Workouts`;
+    // Difficulty tracks for tiered programs (e.g. Power Builder 6217 and Glute Builder 5895)
+    const beginnerList = (currentProgram.workoutPostIdBeginnerList || []).map(wid => workoutsIndex[String(wid)]).filter(Boolean);
+    const intermediateList = (currentProgram.workoutPostIdIntermediateList || []).map(wid => workoutsIndex[String(wid)]).filter(Boolean);
+    const advancedList = (currentProgram.workoutPostIdAdvancedList || []).map(wid => workoutsIndex[String(wid)]).filter(Boolean);
+    const hasDifficultyTracks = (beginnerList.length > 0 || intermediateList.length > 0 || advancedList.length > 0);
+
+    const trackPillsRow = document.getElementById('programTrackPillsRow');
+    let activeTrack = 'beginner';
+
+    function getActiveTrackWorkouts(track) {
+      if (!hasDifficultyTracks) return programWorkouts;
+      if (track === 'beginner') return beginnerList;
+      if (track === 'intermediate') return intermediateList;
+      if (track === 'advanced') return advancedList;
+      return programWorkouts; // all
+    }
+
+    function renderWorkoutPlaylist(workoutsToRender, trackLabel) {
+      workoutCountBadge.textContent = `${workoutsToRender.length} Workouts${trackLabel ? ` (${trackLabel})` : ''}`;
+      workoutsListContainer.innerHTML = '';
+
+      workoutsToRender.forEach((w, index) => {
+        const isDone = completedSet.has(String(w.workoutPostId));
+        const row = document.createElement('div');
+        row.className = 'program-workout-item';
+        const cleanWTitle = cleanText(w.title);
+        const isCooldown = w.videoType === 'cooldown';
+        const videoBadgeText = isCooldown ? 'Guided Cooldown Flow' : 'Full Video Class';
+
+        row.innerHTML = `
+          <div class="workout-item-left">
+            <div class="workout-order-circle ${isDone ? 'completed' : ''}">
+              ${isDone ? '✓' : index + 1}
+            </div>
+            <div class="workout-item-text">
+              <div class="workout-item-title">${cleanWTitle}</div>
+              <div class="workout-item-subtitle">
+                <span>⏱️ ${w.duration} Min &bull; ${cleanText(w.videoCategory) || 'Workout'}</span>
+                <span class="badge ${isCooldown ? 'badge-sand' : 'badge-purple'} badge-xs">${videoBadgeText}</span>
+              </div>
+            </div>
+          </div>
+          <div class="workout-action-group">
+            <button class="workout-action-btn workout-preview-btn" data-workout-id="${w.workoutPostId}" title="Preview ${isCooldown ? 'cooldown flow' : 'video'} in Picture-in-Picture mini player">
+              ▶ Preview
+            </button>
+            <button class="workout-action-btn workout-open-btn ${isDone ? 'completed' : ''}" data-workout-id="${w.workoutPostId}" title="Open full workout details & circuits">
+              ${isDone ? 'Replay' : 'Open'} &rarr;
+            </button>
+          </div>
+        `;
+
+        const previewBtn = row.querySelector('.workout-preview-btn');
+        if (previewBtn) {
+          previewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            previewWorkoutInPiP(w.workoutPostId);
+          });
+        }
+
+        const openBtn = row.querySelector('.workout-open-btn');
+        if (openBtn) {
+          openBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateTo('#/workout/' + w.workoutPostId);
+          });
+        }
+
+        row.addEventListener('click', () => navigateTo('#/workout/' + w.workoutPostId));
+        workoutsListContainer.appendChild(row);
+      });
+    }
 
     const bannerImg = currentProgram.assets && currentProgram.assets.featureCardImageUrl ? currentProgram.assets.featureCardImageUrl : 'assets/images/menovation-site-cover.webp';
     const equipmentItems = (info.equipmentList || []).map(eq => `<span class="equipment-chip">⚡ ${cleanText(eq.itemTitle)}</span>`).join('');
@@ -692,58 +871,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>
     `;
 
-    // Render Workout Playlist
-    workoutsListContainer.innerHTML = '';
-    programWorkouts.forEach((w, index) => {
-      const isDone = completedSet.has(String(w.workoutPostId));
-      const row = document.createElement('div');
-      row.className = 'program-workout-item';
-      const cleanWTitle = cleanText(w.title);
-      const isCooldown = w.videoType === 'cooldown';
-      const videoBadgeText = isCooldown ? 'Guided Cooldown Video' : 'Full Video Class';
-
-      row.innerHTML = `
-        <div class="workout-item-left">
-          <div class="workout-order-circle ${isDone ? 'completed' : ''}">
-            ${isDone ? '✓' : index + 1}
-          </div>
-          <div class="workout-item-text">
-            <div class="workout-item-title">${cleanWTitle}</div>
-            <div class="workout-item-subtitle">
-              <span>⏱️ ${w.duration} Min &bull; ${cleanText(w.videoCategory) || 'Workout'}</span>
-              <span class="badge ${isCooldown ? 'badge-sand' : 'badge-purple'} badge-xs">${videoBadgeText}</span>
-            </div>
-          </div>
-        </div>
-        <div class="workout-action-group">
-          <button class="workout-action-btn workout-preview-btn" data-workout-id="${w.workoutPostId}" title="Preview video in Picture-in-Picture mini player">
-            ▶ Preview
-          </button>
-          <button class="workout-action-btn workout-open-btn ${isDone ? 'completed' : ''}" data-workout-id="${w.workoutPostId}" title="Open full workout details">
-            ${isDone ? 'Replay' : 'Open'} &rarr;
-          </button>
-        </div>
+    // Render Track Filter Pills and Workout Playlist
+    if (hasDifficultyTracks && trackPillsRow) {
+      trackPillsRow.style.display = 'flex';
+      trackPillsRow.innerHTML = `
+        <button class="filter-pill ${activeTrack === 'beginner' ? 'active' : ''}" data-track="beginner">Beginner (${beginnerList.length})</button>
+        <button class="filter-pill ${activeTrack === 'intermediate' ? 'active' : ''}" data-track="intermediate">Intermediate (${intermediateList.length})</button>
+        <button class="filter-pill ${activeTrack === 'advanced' ? 'active' : ''}" data-track="advanced">Advanced (${advancedList.length})</button>
+        <button class="filter-pill ${activeTrack === 'all' ? 'active' : ''}" data-track="all">All (${programWorkouts.length})</button>
       `;
 
-      const previewBtn = row.querySelector('.workout-preview-btn');
-      if (previewBtn) {
-        previewBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          previewWorkoutInPiP(w.workoutPostId);
+      trackPillsRow.querySelectorAll('.filter-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          trackPillsRow.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeTrack = btn.dataset.track;
+          const trackLabel = activeTrack === 'all' ? 'All Tiers' : activeTrack.charAt(0).toUpperCase() + activeTrack.slice(1) + ' Track';
+          renderWorkoutPlaylist(getActiveTrackWorkouts(activeTrack), trackLabel);
         });
-      }
+      });
 
-      const openBtn = row.querySelector('.workout-open-btn');
-      if (openBtn) {
-        openBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          navigateTo('#/workout/' + w.workoutPostId);
-        });
-      }
-
-      row.addEventListener('click', () => navigateTo('#/workout/' + w.workoutPostId));
-      workoutsListContainer.appendChild(row);
-    });
+      renderWorkoutPlaylist(beginnerList, 'Beginner Track');
+    } else {
+      if (trackPillsRow) trackPillsRow.style.display = 'none';
+      renderWorkoutPlaylist(programWorkouts, null);
+    }
 
     showView('viewProgramDetail');
   }
@@ -899,6 +1051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       updateCompletionButtonUI(true);
     }
+    pushUserDataToServer();
   });
 
   // Player controls
@@ -1833,6 +1986,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     alert('Entry saved to your offline diary!');
     document.getElementById('symptomNotes').value = '';
     loadDiaryHistory();
+    pushUserDataToServer();
   });
 
   async function loadDiaryHistory() {

@@ -235,6 +235,7 @@
   function saveSession(patch) {
     const next = Object.assign({}, loadSession() || {}, patch, { updatedAt: new Date().toISOString() });
     localStorage.setItem(KEY, JSON.stringify(next));
+    if (window.mvnSyncUpDebounced) window.mvnSyncUpDebounced();
     return next;
   }
 
@@ -363,5 +364,6 @@
   });
   renderResumeTile().then(() => { if (isTV) refocusSoon(); });
 
-  window.mvnTv = { isTV, handleBack, findNext, resolveResume, loadSession };
+  window.mvnRenderResumeTile = renderResumeTile;
+  window.mvnTv = { isTV, handleBack, findNext, resolveResume, loadSession, renderResumeTile };
 })();
