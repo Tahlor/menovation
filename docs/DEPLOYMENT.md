@@ -27,10 +27,28 @@ flowchart LR
     end
 ```
 
+### Component Roles & Responsibilities
+
+| Component | Host | Role & Responsibilities |
+| :--- | :--- | :--- |
+| **Pi3 (Raspberry Pi 3)** | Local LAN (`192.168.187.103`) | **Bulk Media & File Storage Host**<br>&bull; Hosts physical Western Digital 4TB drive (`/home/pi/WD4TB/menovation/`).<br>&bull; Stores all 507 high-resolution 720p workout videos and 1,134 exercise demonstration GIFs.<br>&bull; Serves app shell, media, and catalogs via Caddy on port 8085.<br>&bull; Maintains persistent SSH reverse tunnel to Archimedes (`127.0.0.1:8085`), eliminating cloud storage fees. |
+| **Archimedes** | Cloud Server (`144.24.9.80`) | **Public Gateway, SSO Auth & User State Server**<br>&bull; Handles HTTPS endpoint (`https://data.taylorarchibald.com/menovation/`).<br>&bull; Universal SSO (port 5050) with session cookies & TV QR pairing.<br>&bull; NGINX reverse proxy with `auth_request` gating all endpoints.<br>&bull; 3GB SSD Video Slice Cache (2MB chunks, 30-day retention) so video hits Pi3 over the tunnel only once.<br>&bull; **User Data State Host**: Serves `/sso/menovation/user-data` and persists completed workouts, diary logs, and video resume positions per SSO user account in `~/menovation_userdata/<username>.json`. |
+
 ### Path Mappings
 1. **App Shell & Data**: `https://data.taylorarchibald.com/menovation/` -> Proxied directly to `http://127.0.0.1:8085/app/` on Pi3.
 2. **Video Streaming**: `https://data.taylorarchibald.com/menovation/videos/` -> Proxied with 2MB slice chunking and cached for 30 days in Archimedes SSD cache.
 3. **Exercise GIFs**: `https://data.taylorarchibald.com/menovation/gifs/` -> Proxied and cached for 30 days in Archimedes SSD cache.
+4. **User Progress & State Sync**: `https://data.taylorarchibald.com/sso/menovation/user-data` -> Handled by SSO Flask app on Archimedes, associating workout completions, diary entries, and resume positions directly with the authenticated SSO user.
+
+---
+
+### User State Sync & Multi-Device Persistence
+
+User progress, diary entries, and playback positions are not trapped in a single device's browser:
+- **On App Launch**: The client calls `/sso/menovation/user-data`. When connected to Archimedes, it automatically hydrates the user's completed workout checkmarks, diary history, and the home screen "Continue" / "Up Next" tile from their SSO profile.
+- **On Actions**: Marking a workout complete, submitting a diary entry, or pausing a video writes to local storage for instant zero-latency UI response, and asynchronously syncs up to Archimedes.
+- **Account Switching**: If another user signs in on the same Fire TV or browser, the app recognizes the username change and isolates their local data.
+- **Offline Fallback**: If internet connectivity is interrupted, the app operates 100% offline using the cached IndexedDB/localStorage data.
 
 ---
 

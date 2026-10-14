@@ -94,6 +94,7 @@ Then visit `http://localhost:8080` in your browser.
 
 | Document | Focus Area |
 | :--- | :--- |
+| [**Production Architecture & Deployment Guide**](file:///mnt/c/Users/taylor/github/menovation/docs/DEPLOYMENT.md) | Complete guide to Archimedes NGINX proxy, Universal SSO, Pi3 4TB storage, SSD slice caching, user sync API, and deployment scripts. |
 | [**Offline Architecture Specification**](file:///mnt/c/Users/taylor/github/menovation/docs/OFFLINE_ARCHITECTURE.md) | High-level system overview, comparison with current cloud architecture, PWA vs. Native app tradeoffs, and three-tier media storage model. |
 | [**Asset Collection Plan & Strategy**](file:///mnt/c/Users/taylor/github/menovation/docs/ASSET_COLLECTION_PLAN.md) | Scope of authorized downloads, categorization, checksum verification, and caching policies. |
 | [**Offline Auth & Sync Protocol**](file:///mnt/c/Users/taylor/github/menovation/docs/OFFLINE_AUTH_AND_SYNC_SPEC.md) | Handling login when internet is down, JWT caching, local PIN hashing, outbox sync queue, and conflict resolution. |
