@@ -754,6 +754,16 @@ input[type="range"] {
   margin-bottom: 1.5rem;
 }
 
+.program-hero-paragraph {
+  margin-bottom: 0.85rem;
+  line-height: 1.65;
+  color: var(--mvn-dark);
+}
+
+.program-hero-paragraph:last-child {
+  margin-bottom: 0;
+}
+
 .equipment-chips {
   display: flex;
   gap: 0.5rem;
@@ -862,6 +872,68 @@ input[type="range"] {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.workout-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.workout-action-btn {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0 1.15rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workout-preview-btn {
+  background: var(--mvn-white);
+  color: var(--mvn-purple);
+  border: 1.5px solid var(--mvn-purple);
+  box-shadow: 0 1px 3px rgba(119, 0, 83, 0.08);
+}
+
+.workout-preview-btn:hover {
+  background: rgba(119, 0, 83, 0.08);
+  border-color: var(--mvn-purple-dark);
+  color: var(--mvn-purple-dark);
+  transform: translateY(-1px);
+}
+
+.workout-open-btn {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+  border: 1.5px solid var(--mvn-purple);
+  box-shadow: 0 1px 3px rgba(119, 0, 83, 0.15);
+}
+
+.workout-open-btn:hover {
+  background: var(--mvn-purple-dark);
+  border-color: var(--mvn-purple-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(119, 0, 83, 0.25);
+}
+
+.workout-open-btn.completed {
+  background: #2e7d32;
+  color: var(--mvn-white);
+  border-color: #2e7d32;
+}
+
+.workout-open-btn.completed:hover {
+  background: #1b5e20;
+  border-color: #1b5e20;
 }
 
 .workout-action-pill {
@@ -1019,6 +1091,27 @@ input[type="range"] {
   align-items: center;
   gap: 0.5rem;
   user-select: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.mini-player-header:active,
+.mini-player-header.is-dragging {
+  cursor: grabbing;
+}
+
+.mini-player-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.mini-player-header:hover .mini-player-drag-handle {
+  color: var(--mvn-neon);
 }
 
 .mini-player-title-box {
@@ -1190,6 +1283,49 @@ input[type="range"] {
   flex: 1;
 }
 
+/* Mini-Player Volume Controls */
+.mini-volume-control {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.mini-volume-slider {
+  width: 58px;
+  height: 4px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  transition: height 0.15s ease, background 0.15s ease, width 0.2s ease;
+}
+
+.mini-volume-slider:hover {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.mini-volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--mvn-neon);
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(201, 242, 119, 0.6);
+}
+
+.mini-volume-slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--mvn-neon);
+  cursor: pointer;
+  border: none;
+}
+
 @media (max-width: 600px) {
   #viewWorkoutPlayer.in-mini-mode .video-wrapper {
     bottom: 16px;
@@ -1197,6 +1333,10 @@ input[type="range"] {
     left: 12px;
     width: auto;
     max-width: 100%;
+  }
+
+  .mini-volume-slider {
+    width: 44px;
   }
 }
 
@@ -1777,6 +1917,52 @@ input[type="range"] {
   width: 100%;
 }
 
+.workout-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.workout-card-btn {
+  flex: 1;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.workout-card-preview-btn {
+  background: var(--mvn-white);
+  color: var(--mvn-purple);
+  border: 1.5px solid var(--mvn-purple);
+}
+
+.workout-card-preview-btn:hover {
+  background: rgba(119, 0, 83, 0.08);
+  border-color: var(--mvn-purple-dark);
+  color: var(--mvn-purple-dark);
+  transform: translateY(-1px);
+}
+
+.workout-card-open-btn {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+  border: 1.5px solid var(--mvn-purple);
+}
+
+.workout-card-open-btn:hover {
+  background: var(--mvn-purple-dark);
+  border-color: var(--mvn-purple-dark);
+  transform: translateY(-1px);
+}
+
 .workout-card-play-btn {
   width: 100%;
   padding: 0.6rem 1rem;
@@ -1798,6 +1984,40 @@ input[type="range"] {
   background: var(--mvn-purple);
   color: var(--mvn-cream);
   border-color: var(--mvn-purple);
+}
+
+/* Format & Cooldown Notice Banner */
+.circuit-format-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background-color: var(--mvn-light-cream);
+  border: 1.5px solid var(--mvn-sand);
+  border-left: 4px solid var(--mvn-gold);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0.85rem 1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.circuit-format-banner .banner-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.circuit-format-banner .banner-content strong {
+  display: block;
+  color: var(--mvn-purple);
+  font-size: 0.92rem;
+  margin-bottom: 0.25rem;
+}
+
+.circuit-format-banner .banner-content p {
+  color: var(--mvn-gray-600);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin: 0;
 }
 
 /* ========================================================================== */
@@ -1861,6 +2081,42 @@ input[type="range"] {
   font-weight: 700;
   color: var(--mvn-dark);
   margin-bottom: 0.35rem;
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2.5rem 0 1.5rem;
+  width: 100%;
+}
+
+.load-more-btn {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.8rem 2.2rem;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: var(--mvn-shadow-sm);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.load-more-btn:hover {
+  background: var(--mvn-purple-dark);
+  color: #fff;
+  box-shadow: var(--mvn-shadow-md);
+  transform: translateY(-1px);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
 }
 
 /* Diary Empty State */

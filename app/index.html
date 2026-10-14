@@ -121,12 +121,28 @@
         <!-- Video Player Wrapper -->
         <div class="video-wrapper" id="workoutVideoWrapper">
           <!-- Mini-Player Header (visible in mini-player popout mode) -->
-          <div class="mini-player-header" id="miniPlayerHeader" style="display: none;">
+          <div class="mini-player-header" id="miniPlayerHeader" style="display: none;" title="Drag to reposition">
+            <div class="mini-player-drag-handle" aria-hidden="true" title="Drag to reposition">
+              <svg width="10" height="14" viewBox="0 0 10 16" fill="currentColor">
+                <circle cx="2.5" cy="3" r="1.5"></circle>
+                <circle cx="7.5" cy="3" r="1.5"></circle>
+                <circle cx="2.5" cy="8" r="1.5"></circle>
+                <circle cx="7.5" cy="8" r="1.5"></circle>
+                <circle cx="2.5" cy="13" r="1.5"></circle>
+                <circle cx="7.5" cy="13" r="1.5"></circle>
+              </svg>
+            </div>
             <div class="mini-player-title-box" id="miniPlayerTitleBox" title="Return to workout">
               <span class="mini-player-badge">PLAYING</span>
               <span class="mini-player-title-text" id="miniPlayerWorkoutTitle">Workout Title</span>
             </div>
             <div class="mini-player-actions">
+              <button class="mini-player-action-btn" id="miniPlayerNativePipBtn" title="Pop out into native desktop Picture-in-Picture window" aria-label="Native PiP">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <rect x="11" y="9" width="9" height="6" rx="1" ry="1"></rect>
+                </svg>
+              </button>
               <button class="mini-player-action-btn" id="miniPlayerExpandBtn" title="Return to full workout" aria-label="Expand workout view">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
@@ -168,12 +184,24 @@
               </button>
               <span class="mini-time-display" id="miniTimeDisplay">0:00 / 0:00</span>
               <div class="mini-ctrl-spacer"></div>
-              <button class="mini-ctrl-btn" id="miniPipBtn" title="Picture in Picture" aria-label="Picture in picture" style="display: none;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                  <rect x="12" y="10" width="8" height="8" rx="1"></rect>
-                </svg>
-              </button>
+              <div class="mini-volume-control">
+                <button class="mini-ctrl-btn" id="miniVolumeBtn" title="Mute / Unmute" aria-label="Mute/Unmute">
+                  <svg id="miniVolumeHighIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                  <svg id="miniVolumeLowIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                  <svg id="miniVolumeMutedIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                </button>
+                <input type="range" class="mini-volume-slider" id="miniVolumeSlider" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+              </div>
             </div>
           </div>
           
@@ -218,6 +246,9 @@
             <span class="meta-chip" id="playerDifficultyChip">Level</span>
             <span class="meta-chip" id="playerFocusChip">Target Focus</span>
           </div>
+
+          <!-- Format & Video Role Notice -->
+          <div id="playerWorkoutFormatNotice" style="display: none; margin-top: 0.75rem;"></div>
 
           <!-- The Why -->
           <div class="coaching-why-card" id="playerTheWhyCard" style="display: none;">
@@ -322,6 +353,13 @@
       <!-- Exercise Cards Grid -->
       <div class="exercise-cards-grid" id="exerciseCardsGrid">
         <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Load More Movements -->
+      <div class="load-more-container" id="exerciseLoadMoreContainer" style="display: none;">
+        <button id="exerciseLoadMoreBtn" class="load-more-btn" type="button">
+          Load More Movements ↓
+        </button>
       </div>
     </section>
 

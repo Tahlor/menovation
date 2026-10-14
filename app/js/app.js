@@ -17,14 +17,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!str) return '';
     return String(str)
       .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\r/g, '\n')
       .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '\r')
       .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"')
       .replace(/&#039;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&rsquo;/g, '’')
+      .replace(/&lsquo;/g, '‘')
+      .replace(/&rdquo;/g, '”')
+      .replace(/&ldquo;/g, '“')
+      .replace(/&hellip;/g, '…')
+      .replace(/&ndash;/g, '–')
+      .replace(/&mdash;/g, '—')
+      .replace(/&nbsp;/g, ' ')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .trim();
+  }
+
+  function formatParagraphs(text, className = 'program-hero-paragraph') {
+    const cleaned = cleanText(text);
+    if (!cleaned) return '';
+    const paragraphs = cleaned.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    if (paragraphs.length === 0) return '';
+    return paragraphs.map(p => `<p class="${className}">${p.replace(/\n/g, '<br>')}</p>`).join('');
   }
 
   // Media Server Configuration
@@ -113,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const miniPlayerHeader = document.getElementById('miniPlayerHeader');
   const miniPlayerTitleBox = document.getElementById('miniPlayerTitleBox');
   const miniPlayerWorkoutTitle = document.getElementById('miniPlayerWorkoutTitle');
+  const miniPlayerNativePipBtn = document.getElementById('miniPlayerNativePipBtn');
   const miniPlayerExpandBtn = document.getElementById('miniPlayerExpandBtn');
   const miniPlayerCloseBtn = document.getElementById('miniPlayerCloseBtn');
   const miniPlayerControlsBar = document.getElementById('miniPlayerControlsBar');
@@ -123,11 +143,91 @@ document.addEventListener('DOMContentLoaded', async () => {
   const miniSkipBackBtn = document.getElementById('miniSkipBackBtn');
   const miniSkipForwardBtn = document.getElementById('miniSkipForwardBtn');
   const miniTimeDisplay = document.getElementById('miniTimeDisplay');
-  const miniPipBtn = document.getElementById('miniPipBtn');
+  const miniVolumeBtn = document.getElementById('miniVolumeBtn');
+  const miniVolumeSlider = document.getElementById('miniVolumeSlider');
+  const miniVolumeHighIcon = document.getElementById('miniVolumeHighIcon');
+  const miniVolumeLowIcon = document.getElementById('miniVolumeLowIcon');
+  const miniVolumeMutedIcon = document.getElementById('miniVolumeMutedIcon');
 
   // Mini-Player State
   let isMiniPlayerActive = false;
   let isScrubbingMini = false;
+  let lastUnmutedVolume = 1.0;
+
+  // Draggable State
+  let isDraggingMini = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let initialPlayerLeft = 0;
+  let initialPlayerTop = 0;
+  let hasDragged = false;
+  let savedMiniLeft = null;
+  let savedMiniTop = null;
+
+  function clampMiniPlayerPosition() {
+    if (!workoutVideoWrapper || savedMiniLeft === null || savedMiniTop === null) return;
+    const rect = workoutVideoWrapper.getBoundingClientRect();
+    const width = rect.width || 380;
+    const height = rect.height || 260;
+    const minX = 8;
+    const maxX = Math.max(minX, window.innerWidth - width - 8);
+    const minY = 8;
+    const maxY = Math.max(minY, window.innerHeight - height - 8);
+
+    savedMiniLeft = Math.min(Math.max(savedMiniLeft, minX), maxX);
+    savedMiniTop = Math.min(Math.max(savedMiniTop, minY), maxY);
+
+    workoutVideoWrapper.style.left = `${savedMiniLeft}px`;
+    workoutVideoWrapper.style.top = `${savedMiniTop}px`;
+    workoutVideoWrapper.style.right = 'auto';
+    workoutVideoWrapper.style.bottom = 'auto';
+  }
+
+  function restoreMiniPlayerPosition() {
+    if (!workoutVideoWrapper) return;
+    if (savedMiniLeft !== null && savedMiniTop !== null) {
+      clampMiniPlayerPosition();
+    } else {
+      workoutVideoWrapper.style.left = '';
+      workoutVideoWrapper.style.top = '';
+      workoutVideoWrapper.style.right = '';
+      workoutVideoWrapper.style.bottom = '';
+    }
+  }
+
+  function resetMiniPlayerPosition() {
+    if (!workoutVideoWrapper) return;
+    workoutVideoWrapper.style.left = '';
+    workoutVideoWrapper.style.top = '';
+    workoutVideoWrapper.style.right = '';
+    workoutVideoWrapper.style.bottom = '';
+  }
+
+  function updateMiniPlayerVolumeUI() {
+    if (!videoPlayer) return;
+    const isMuted = videoPlayer.muted || videoPlayer.volume === 0;
+    const vol = isMuted ? 0 : videoPlayer.volume;
+
+    if (miniVolumeSlider) {
+      miniVolumeSlider.value = vol;
+    }
+
+    if (miniVolumeHighIcon && miniVolumeLowIcon && miniVolumeMutedIcon) {
+      if (isMuted || vol === 0) {
+        miniVolumeMutedIcon.style.display = 'block';
+        miniVolumeHighIcon.style.display = 'none';
+        miniVolumeLowIcon.style.display = 'none';
+      } else if (vol < 0.5) {
+        miniVolumeLowIcon.style.display = 'block';
+        miniVolumeHighIcon.style.display = 'none';
+        miniVolumeMutedIcon.style.display = 'none';
+      } else {
+        miniVolumeHighIcon.style.display = 'block';
+        miniVolumeLowIcon.style.display = 'none';
+        miniVolumeMutedIcon.style.display = 'none';
+      }
+    }
+  }
 
   function getNavVideoBehavior() {
     return localStorage.getItem('mvn_nav_video_behavior') || 'popout';
@@ -165,6 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     updateMiniPlayerPlayPauseUI();
+    updateMiniPlayerVolumeUI();
     const cur = videoPlayer.currentTime || 0;
     const dur = videoPlayer.duration || 0;
     if (miniPlayerScrubber && dur > 0) {
@@ -173,6 +274,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (miniTimeDisplay) {
       miniTimeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
     }
+    restoreMiniPlayerPosition();
   }
 
   function exitMiniPlayer(shouldPause = false) {
@@ -189,6 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (miniPlayerHeader) miniPlayerHeader.style.display = 'none';
     if (miniPlayerControlsBar) miniPlayerControlsBar.style.display = 'none';
     if (videoSourceInfo) videoSourceInfo.style.display = 'flex';
+    resetMiniPlayerPosition();
   }
 
   function dismissMiniPlayer() {
@@ -201,6 +304,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   function returnToWorkoutView() {
     if (currentWorkout) {
       navigateTo('#/workout/' + currentWorkout.workoutPostId);
+    }
+  }
+
+  async function previewWorkoutInPiP(workoutId) {
+    if (!workoutsIndex) return;
+    const w = workoutsIndex[String(workoutId)];
+    if (!w) {
+      console.warn(`Workout #${workoutId} not found in index.`);
+      return;
+    }
+
+    currentWorkout = w;
+
+    const videoUrl = getVideoUrl(w.videoFilename);
+    if (!videoUrl) {
+      alert('No preview video available for this workout.');
+      return;
+    }
+
+    if (videoPlayer.getAttribute('src') !== videoUrl) {
+      videoPlayer.src = videoUrl;
+    }
+
+    // Launch into floating mini/PiP player
+    enterMiniPlayer();
+
+    if (miniPlayerWorkoutTitle) {
+      const typeSuffix = w.videoType === 'cooldown' ? ' (Cooldown Flow)' : '';
+      miniPlayerWorkoutTitle.textContent = `${cleanText(w.title)}${typeSuffix}`;
+    }
+
+    try {
+      await videoPlayer.play();
+    } catch (err) {
+      console.warn('Auto-play blocked by browser policy:', err);
     }
   }
 
@@ -462,17 +600,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.className = 'program-card';
       const imgSrc = p.assets && p.assets.programCardImageUrl ? p.assets.programCardImageUrl : 'assets/images/menovation-site-cover.webp';
 
+      const cleanTitle = cleanText(info.programTitle) || ('Program ' + pid);
+      const cleanTagline = cleanText(copy.programTaglineCopy || copy.programOverviewCopy || 'Designed for midlife strength and vitality.');
+
       card.innerHTML = `
         <div class="program-card-thumb-wrapper">
-          <img src="${imgSrc}" alt="${info.programTitle}" class="program-card-img" loading="lazy">
+          <img src="${imgSrc}" alt="${cleanTitle}" class="program-card-img" loading="lazy">
           <span class="program-card-badge">${workoutCount} Workouts</span>
         </div>
         <div class="program-card-body">
-          <h3 class="program-card-title">${info.programTitle || 'Program ' + pid}</h3>
-          <p class="program-card-tagline">${copy.programTaglineCopy || copy.programOverviewCopy || 'Designed for midlife strength and vitality.'}</p>
+          <h3 class="program-card-title">${cleanTitle}</h3>
+          <p class="program-card-tagline">${cleanTagline}</p>
           <div class="program-meta-row">
             <span>⏱️ ${info.workoutDurationLowerBound || 20}–${info.workoutDurationUpperBound || 35} Min</span>
-            <span class="badge badge-purple">${copy.marketingSummaryLineCopy ? copy.marketingSummaryLineCopy.split('•')[1] || 'All Levels' : 'All Levels'}</span>
+            <span class="badge badge-purple">${copy.marketingSummaryLineCopy ? cleanText(copy.marketingSummaryLineCopy.split('•')[1] || 'All Levels') : 'All Levels'}</span>
           </div>
           <button class="btn btn-primary" style="width: 100%; margin-top: auto;">
             Explore Program &rarr;
@@ -509,7 +650,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const workoutsListContainer = document.getElementById('programWorkoutsList');
     const workoutCountBadge = document.getElementById('programWorkoutCount');
 
-    document.title = `${info.programTitle || 'Program ' + pid} | Menovation`;
+    const cleanTitle = cleanText(info.programTitle) || ('Program ' + pid);
+    const cleanTagline = cleanText(copy.programTaglineCopy) || 'Full Program Schedule';
+    const overviewHtml = formatParagraphs(copy.programOverviewCopy || 'Designed for midlife strength and vitality.');
+
+    document.title = `${cleanTitle} | Menovation`;
 
     // Get completed workouts set
     const completedSet = new Set((await window.mvnDB.getAll('completed_workouts')).map(c => String(c.workoutId)));
@@ -527,17 +672,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     workoutCountBadge.textContent = `${programWorkouts.length} Workouts`;
 
     const bannerImg = currentProgram.assets && currentProgram.assets.featureCardImageUrl ? currentProgram.assets.featureCardImageUrl : 'assets/images/menovation-site-cover.webp';
-    const equipmentItems = (info.equipmentList || []).map(eq => `<span class="equipment-chip">⚡ ${eq.itemTitle}</span>`).join('');
+    const equipmentItems = (info.equipmentList || []).map(eq => `<span class="equipment-chip">⚡ ${cleanText(eq.itemTitle)}</span>`).join('');
 
     heroCard.innerHTML = `
-      <img src="${bannerImg}" alt="${info.programTitle}" class="program-hero-banner" loading="lazy">
+      <img src="${bannerImg}" alt="${cleanTitle}" class="program-hero-banner" loading="lazy">
       <div class="program-hero-content">
-        <h1>${info.programTitle}</h1>
+        <h1>${cleanTitle}</h1>
         <div class="program-hero-meta">
-          <span class="badge badge-purple">${copy.programTaglineCopy || 'Full Program Schedule'}</span>
+          <span class="badge badge-purple">${cleanTagline}</span>
           <span class="badge badge-sand">⏱️ ${info.workoutDurationLowerBound || 20}&ndash;${info.workoutDurationUpperBound || 35} Min / Session</span>
         </div>
-        <p class="program-hero-desc">${copy.programOverviewCopy || ''}</p>
+        <div class="program-hero-desc">${overviewHtml}</div>
         ${equipmentItems ? `
           <div>
             <strong>Required Equipment:</strong>
@@ -553,20 +698,48 @@ document.addEventListener('DOMContentLoaded', async () => {
       const isDone = completedSet.has(String(w.workoutPostId));
       const row = document.createElement('div');
       row.className = 'program-workout-item';
+      const cleanWTitle = cleanText(w.title);
+      const isCooldown = w.videoType === 'cooldown';
+      const videoBadgeText = isCooldown ? 'Guided Cooldown Video' : 'Full Video Class';
+
       row.innerHTML = `
         <div class="workout-item-left">
           <div class="workout-order-circle ${isDone ? 'completed' : ''}">
             ${isDone ? '✓' : index + 1}
           </div>
           <div class="workout-item-text">
-            <div class="workout-item-title">${w.title}</div>
-            <div class="workout-item-subtitle">⏱️ ${w.duration} Min &bull; ${w.videoCategory || 'Workout'}</div>
+            <div class="workout-item-title">${cleanWTitle}</div>
+            <div class="workout-item-subtitle">
+              <span>⏱️ ${w.duration} Min &bull; ${cleanText(w.videoCategory) || 'Workout'}</span>
+              <span class="badge ${isCooldown ? 'badge-sand' : 'badge-purple'} badge-xs">${videoBadgeText}</span>
+            </div>
           </div>
         </div>
-        <div class="workout-action-pill ${isDone ? 'completed' : ''}">
-          ${isDone ? 'Replay ▶' : 'Start ▶'}
+        <div class="workout-action-group">
+          <button class="workout-action-btn workout-preview-btn" data-workout-id="${w.workoutPostId}" title="Preview video in Picture-in-Picture mini player">
+            ▶ Preview
+          </button>
+          <button class="workout-action-btn workout-open-btn ${isDone ? 'completed' : ''}" data-workout-id="${w.workoutPostId}" title="Open full workout details">
+            ${isDone ? 'Replay' : 'Open'} &rarr;
+          </button>
         </div>
       `;
+
+      const previewBtn = row.querySelector('.workout-preview-btn');
+      if (previewBtn) {
+        previewBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          previewWorkoutInPiP(w.workoutPostId);
+        });
+      }
+
+      const openBtn = row.querySelector('.workout-open-btn');
+      if (openBtn) {
+        openBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigateTo('#/workout/' + w.workoutPostId);
+        });
+      }
 
       row.addEventListener('click', () => navigateTo('#/workout/' + w.workoutPostId));
       workoutsListContainer.appendChild(row);
@@ -613,14 +786,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const equipChips = document.getElementById('playerEquipmentChips');
     const circuitsContainer = document.getElementById('playerCircuitsContainer');
 
-    titleEl.textContent = currentWorkout.title;
+    const cleanTitle = cleanText(currentWorkout.title);
+    titleEl.textContent = cleanTitle;
     durationChip.textContent = `⏱️ ${currentWorkout.duration} Minutes`;
-    diffChip.textContent = currentWorkout.videoCategory || 'All Levels';
+    diffChip.textContent = cleanText(currentWorkout.videoCategory) || 'All Levels';
     focusChip.textContent = currentWorkout.focus ? `Focus: Type ${currentWorkout.focus}` : 'Full Body';
 
     // Set program title
     const prog = programsData && programsData[String(currentWorkout.programPostId)];
-    programBadge.textContent = prog ? (prog.basicInfo && prog.basicInfo.programTitle ? prog.basicInfo.programTitle : 'Program') : 'Menovation';
+    programBadge.textContent = prog ? (prog.basicInfo && prog.basicInfo.programTitle ? cleanText(prog.basicInfo.programTitle) : 'Program') : 'Menovation';
+
+    // Workout Format & Cooldown Video Notice
+    const isCooldown = currentWorkout.videoType === 'cooldown';
+    const formatNotice = document.getElementById('playerWorkoutFormatNotice');
+    if (formatNotice) {
+      if (isCooldown) {
+        formatNotice.style.display = 'block';
+        formatNotice.innerHTML = `
+          <div class="circuit-format-banner">
+            <div class="banner-icon">⚡</div>
+            <div class="banner-content">
+              <strong>Structured Circuit Workout &bull; Guided Cooldown Video Flow</strong>
+              <p>Perform the targeted exercises, sets, reps, and timed intervals listed in the interactive circuits below. The video player above provides your guided cooldown flow to conclude your session.</p>
+            </div>
+          </div>
+        `;
+      } else {
+        formatNotice.style.display = 'none';
+        formatNotice.innerHTML = '';
+      }
+    }
 
     // The Why
     if (currentWorkout.theWhy) {
@@ -639,7 +834,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       eqList.forEach(eq => {
         const chip = document.createElement('span');
         chip.className = 'equipment-chip';
-        chip.textContent = `⚡ ${eq.itemTitle}`;
+        chip.textContent = `⚡ ${cleanText(eq.itemTitle)}`;
         equipChips.appendChild(chip);
       });
     } else {
@@ -662,6 +857,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Video Stream URL
     const videoUrl = getVideoUrl(currentWorkout.videoFilename);
     updateServerBadgeDisplay();
+
+    if (videoCurrentSourceBadge) {
+      const serverChoiceText = serverStatusText ? serverStatusText.textContent : 'Pi3';
+      const roleLabel = isCooldown ? 'Guided Cooldown Flow' : 'Full-Length Video Class';
+      videoCurrentSourceBadge.textContent = `${roleLabel} • Streaming from ${serverChoiceText} (${getMediaBaseUrl()})`;
+    }
 
     if (videoPlayer.getAttribute('src') !== videoUrl) {
       videoPlayer.pause();
@@ -721,18 +922,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  // Helper to safely trigger native Picture-in-Picture
+  async function toggleNativePictureInPicture() {
+    if (!document.pictureInPictureEnabled || !videoPlayer) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        if (videoPlayer.readyState < 1) {
+          await new Promise((resolve) => {
+            videoPlayer.addEventListener('loadedmetadata', resolve, { once: true });
+          });
+        }
+        await videoPlayer.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.warn('Native PiP toggle error:', err);
+    }
+  }
+
   // Picture in picture button for main workout player
   if (document.pictureInPictureEnabled && pipBtn) {
     pipBtn.style.display = 'inline-block';
-    pipBtn.addEventListener('click', async () => {
-      try {
-        if (document.pictureInPictureElement) {
-          await document.exitPictureInPicture();
-        } else if (videoPlayer) {
-          await videoPlayer.requestPictureInPicture();
-        }
-      } catch (err) {
-        console.warn('PiP error:', err);
+    pipBtn.addEventListener('click', toggleNativePictureInPicture);
+  }
+
+  // Native Picture in Picture button on floating mini-player header
+  if (miniPlayerNativePipBtn) {
+    if (document.pictureInPictureEnabled) {
+      miniPlayerNativePipBtn.style.display = 'inline-flex';
+      miniPlayerNativePipBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleNativePictureInPicture();
+      });
+    } else {
+      miniPlayerNativePipBtn.style.display = 'none';
+    }
+  }
+
+  // Listen to native picture-in-picture lifecycle events
+  if (videoPlayer) {
+    videoPlayer.addEventListener('enterpictureinpicture', () => {
+      if (pipBtn) {
+        pipBtn.classList.add('active');
+        pipBtn.textContent = 'Exit PiP ⧉';
+      }
+      if (miniPlayerNativePipBtn) {
+        miniPlayerNativePipBtn.classList.add('active');
+      }
+    });
+    videoPlayer.addEventListener('leavepictureinpicture', () => {
+      if (pipBtn) {
+        pipBtn.classList.remove('active');
+        pipBtn.textContent = 'PiP ⧉';
+      }
+      if (miniPlayerNativePipBtn) {
+        miniPlayerNativePipBtn.classList.remove('active');
       }
     });
   }
@@ -746,6 +991,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (miniPlayerTitleBox) {
     miniPlayerTitleBox.addEventListener('click', (e) => {
+      if (hasDragged) return;
       e.stopPropagation();
       returnToWorkoutView();
     });
@@ -788,26 +1034,116 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  if (document.pictureInPictureEnabled && miniPipBtn) {
-    miniPipBtn.style.display = 'inline-flex';
-    miniPipBtn.addEventListener('click', async (e) => {
+  if (miniVolumeBtn) {
+    miniVolumeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      try {
-        if (document.pictureInPictureElement) {
-          await document.exitPictureInPicture();
-        } else if (videoPlayer) {
-          await videoPlayer.requestPictureInPicture();
-        }
-      } catch (err) {
-        console.warn('Mini PiP error:', err);
+      if (!videoPlayer) return;
+      if (videoPlayer.muted || videoPlayer.volume === 0) {
+        videoPlayer.muted = false;
+        videoPlayer.volume = lastUnmutedVolume > 0.05 ? lastUnmutedVolume : 1.0;
+      } else {
+        lastUnmutedVolume = videoPlayer.volume > 0.05 ? videoPlayer.volume : 1.0;
+        videoPlayer.muted = true;
       }
+      updateMiniPlayerVolumeUI();
     });
   }
+
+  if (miniVolumeSlider) {
+    miniVolumeSlider.addEventListener('input', (e) => {
+      e.stopPropagation();
+      if (!videoPlayer) return;
+      const newVol = parseFloat(miniVolumeSlider.value);
+      videoPlayer.volume = newVol;
+      if (newVol > 0) {
+        videoPlayer.muted = false;
+        lastUnmutedVolume = newVol;
+      } else {
+        videoPlayer.muted = true;
+      }
+      updateMiniPlayerVolumeUI();
+    });
+  }
+
+  function initMiniPlayerDraggable() {
+    if (!miniPlayerHeader || !workoutVideoWrapper) return;
+
+    miniPlayerHeader.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
+      if (!isMiniPlayerActive) return;
+
+      isDraggingMini = true;
+      hasDragged = false;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+
+      const rect = workoutVideoWrapper.getBoundingClientRect();
+      initialPlayerLeft = rect.left;
+      initialPlayerTop = rect.top;
+
+      miniPlayerHeader.classList.add('is-dragging');
+      try {
+        miniPlayerHeader.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    });
+
+    miniPlayerHeader.addEventListener('pointermove', (e) => {
+      if (!isDraggingMini) return;
+
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        hasDragged = true;
+      }
+
+      const rect = workoutVideoWrapper.getBoundingClientRect();
+      const width = rect.width || 380;
+      const height = rect.height || 260;
+
+      const minX = 8;
+      const maxX = Math.max(minX, window.innerWidth - width - 8);
+      const minY = 8;
+      const maxY = Math.max(minY, window.innerHeight - height - 8);
+
+      let newLeft = Math.min(Math.max(initialPlayerLeft + dx, minX), maxX);
+      let newTop = Math.min(Math.max(initialPlayerTop + dy, minY), maxY);
+
+      savedMiniLeft = newLeft;
+      savedMiniTop = newTop;
+
+      workoutVideoWrapper.style.left = `${newLeft}px`;
+      workoutVideoWrapper.style.top = `${newTop}px`;
+      workoutVideoWrapper.style.right = 'auto';
+      workoutVideoWrapper.style.bottom = 'auto';
+      workoutVideoWrapper.style.transform = 'none';
+    });
+
+    const endDrag = (e) => {
+      if (!isDraggingMini) return;
+      isDraggingMini = false;
+      miniPlayerHeader.classList.remove('is-dragging');
+      try {
+        if (e && e.pointerId) miniPlayerHeader.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+    };
+
+    miniPlayerHeader.addEventListener('pointerup', endDrag);
+    miniPlayerHeader.addEventListener('pointercancel', endDrag);
+
+    window.addEventListener('resize', () => {
+      if (!isMiniPlayerActive || savedMiniLeft === null || savedMiniTop === null) return;
+      clampMiniPlayerPosition();
+    });
+  }
+
+  initMiniPlayerDraggable();
 
   if (videoPlayer) {
     videoPlayer.addEventListener('play', updateMiniPlayerPlayPauseUI);
     videoPlayer.addEventListener('pause', updateMiniPlayerPlayPauseUI);
     videoPlayer.addEventListener('ended', updateMiniPlayerPlayPauseUI);
+    videoPlayer.addEventListener('volumechange', updateMiniPlayerVolumeUI);
 
     videoPlayer.addEventListener('click', () => {
       if (isMiniPlayerActive) {
@@ -1169,23 +1505,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     summary.textContent = `Showing ${items.length} of ${Object.keys(workoutsIndex).length} workouts`;
     grid.innerHTML = '';
 
-    // Render top 120 matching for high DOM performance
-    const renderLimit = 120;
-    items.slice(0, renderLimit).forEach(w => {
+    // Render all matching workouts
+    items.forEach(w => {
       const card = document.createElement('div');
       card.className = 'workout-card';
+      const cleanWTitle = cleanText(w.title);
+      const isCooldown = w.videoType === 'cooldown';
+      const videoBadgeText = isCooldown ? 'Guided Cooldown' : 'Full Video Class';
+
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="badge badge-purple">${w.videoCategory || 'Workout'}</span>
+          <span class="badge ${isCooldown ? 'badge-sand' : 'badge-purple'}">${videoBadgeText}</span>
           <span style="font-size:0.8rem; font-weight:700; color:var(--mvn-gray-600);">⏱️ ${w.duration} Min</span>
         </div>
-        <h4 class="workout-card-title">${w.title}</h4>
+        <h4 class="workout-card-title">${cleanWTitle}</h4>
         <div class="workout-card-meta">
           <span class="meta-chip">720p HD</span>
-          <span class="meta-chip">${w.equipment.length ? w.equipment[0].itemTitle : 'Bodyweight'}</span>
+          <span class="meta-chip">${w.equipment.length ? cleanText(w.equipment[0].itemTitle) : 'Bodyweight'}</span>
+          <span class="meta-chip">${cleanText(w.videoCategory) || 'General'}</span>
         </div>
         <div class="workout-card-footer">
-          <button class="workout-card-play-btn">Play Workout ▶</button>
+          <div class="workout-card-actions">
+            <button class="workout-card-btn workout-card-preview-btn" data-workout-id="${w.workoutPostId}" title="Preview in Picture-in-Picture player">▶ Preview</button>
+            <button class="workout-card-btn workout-card-open-btn" data-workout-id="${w.workoutPostId}" title="Open full workout">Open &rarr;</button>
+          </div>
         </div>
       `;
       card.dataset.workoutId = String(w.workoutPostId);
@@ -1196,6 +1539,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const workoutsGrid = document.getElementById('workoutsCardsGrid');
   if (workoutsGrid) {
     workoutsGrid.addEventListener('click', (e) => {
+      const previewBtn = e.target.closest('.workout-card-preview-btn');
+      if (previewBtn && previewBtn.dataset.workoutId) {
+        e.stopPropagation();
+        previewWorkoutInPiP(previewBtn.dataset.workoutId);
+        return;
+      }
+      const openBtn = e.target.closest('.workout-card-open-btn');
+      if (openBtn && openBtn.dataset.workoutId) {
+        e.stopPropagation();
+        openWorkoutPlayer(openBtn.dataset.workoutId);
+        return;
+      }
       const card = e.target.closest('.workout-card');
       if (card && card.dataset.workoutId) {
         openWorkoutPlayer(card.dataset.workoutId);
@@ -1211,10 +1566,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- 7. EXERCISE LIBRARY VIEW ---
+  // --- 7. EXERCISE LIBRARY VIEW (PROGRESSIVE BATCH LOADING) ---
+  let activeFilteredExercises = [];
+  let renderedExerciseCount = 0;
+  const EXERCISE_BATCH_SIZE = 60;
+  let exerciseIntersectionObserver = null;
+
+  function renderNextExerciseBatch() {
+    const grid = document.getElementById('exerciseCardsGrid');
+    const summary = document.getElementById('exerciseResultsSummary');
+    const loadMoreContainer = document.getElementById('exerciseLoadMoreContainer');
+    const loadMoreBtn = document.getElementById('exerciseLoadMoreBtn');
+    if (!grid || !activeFilteredExercises) return;
+
+    const nextBatch = activeFilteredExercises.slice(renderedExerciseCount, renderedExerciseCount + EXERCISE_BATCH_SIZE);
+    if (nextBatch.length === 0) {
+      if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    nextBatch.forEach(ex => {
+      const card = document.createElement('div');
+      card.className = 'exercise-card';
+      const gifUrl = getGifUrl(ex.gifUrl);
+
+      card.innerHTML = `
+        <div class="exercise-thumb-wrapper">
+          <img src="${gifUrl}" alt="${cleanText(ex.exerciseTitle)}" class="exercise-thumb-img" loading="lazy" onerror="this.src='assets/images/menovation-sq-purple-300.png'">
+        </div>
+        <div class="exercise-card-body">
+          <div class="exercise-card-title">${cleanText(ex.exerciseTitle)}</div>
+          <div style="font-size:0.75rem; color:var(--mvn-gray-600);">
+            ${ex.usesWeights ? '🏋️ Weights ' : ''}${ex.usesBands ? '⚡ Bands ' : ''}${!ex.usesWeights && !ex.usesBands ? '🧘 Bodyweight' : ''}
+          </div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => openExerciseModal(ex));
+      fragment.appendChild(card);
+    });
+
+    grid.appendChild(fragment);
+    renderedExerciseCount += nextBatch.length;
+
+    const totalMatching = activeFilteredExercises.length;
+    const totalCatalog = exercisesData ? Object.keys(exercisesData).length : 0;
+
+    if (renderedExerciseCount >= totalMatching) {
+      summary.textContent = `Showing all ${totalMatching} movements${totalMatching < totalCatalog ? ` (filtered from ${totalCatalog})` : ''}`;
+      if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+    } else {
+      summary.textContent = `Showing ${renderedExerciseCount} of ${totalMatching} movements (${totalCatalog} total)`;
+      if (loadMoreContainer) {
+        loadMoreContainer.style.display = 'flex';
+        if (loadMoreBtn) {
+          loadMoreBtn.textContent = `Load More Movements (${totalMatching - renderedExerciseCount} remaining) ↓`;
+        }
+      }
+    }
+  }
+
   function renderExerciseLibrary(equipFilter) {
     const grid = document.getElementById('exerciseCardsGrid');
     const summary = document.getElementById('exerciseResultsSummary');
+    const loadMoreContainer = document.getElementById('exerciseLoadMoreContainer');
     if (!grid || !exercisesData) return;
 
     const searchTerm = (document.getElementById('exerciseSearchInput').value || '').toLowerCase().trim();
@@ -1230,29 +1646,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       return true;
     });
 
-    summary.textContent = `Showing ${exercises.length} of ${Object.keys(exercisesData).length} movements`;
+    // Alphabetize movements by title for intuitive browsing
+    exercises.sort((a, b) => (a.exerciseTitle || '').localeCompare(b.exerciseTitle || ''));
+
+    activeFilteredExercises = exercises;
+    renderedExerciseCount = 0;
     grid.innerHTML = '';
 
-    // Render first 80 for smooth scrolling
-    exercises.slice(0, 80).forEach(ex => {
-      const card = document.createElement('div');
-      card.className = 'exercise-card';
-      const gifUrl = getGifUrl(ex.gifUrl);
+    if (exercises.length === 0) {
+      summary.textContent = 'No matching movements found';
+      if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+      return;
+    }
 
-      card.innerHTML = `
-        <div class="exercise-thumb-wrapper">
-          <img src="${gifUrl}" alt="${ex.exerciseTitle}" class="exercise-thumb-img" loading="lazy" onerror="this.src='assets/images/menovation-sq-purple-300.png'">
-        </div>
-        <div class="exercise-card-body">
-          <div class="exercise-card-title">${ex.exerciseTitle}</div>
-          <div style="font-size:0.75rem; color:var(--mvn-gray-600);">
-            ${ex.usesWeights ? '🏋️ Weights ' : ''}${ex.usesBands ? '⚡ Bands ' : ''}${!ex.usesWeights && !ex.usesBands ? '🧘 Bodyweight' : ''}
-          </div>
-        </div>
-      `;
+    renderNextExerciseBatch();
 
-      card.addEventListener('click', () => openExerciseModal(ex));
-      grid.appendChild(card);
+    // Auto-load next batch on scroll when loadMoreContainer enters viewport
+    if (loadMoreContainer && 'IntersectionObserver' in window) {
+      if (exerciseIntersectionObserver) {
+        exerciseIntersectionObserver.disconnect();
+      }
+      exerciseIntersectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && renderedExerciseCount < activeFilteredExercises.length) {
+            renderNextExerciseBatch();
+          }
+        });
+      }, { rootMargin: '300px' });
+      exerciseIntersectionObserver.observe(loadMoreContainer);
+    }
+  }
+
+  const exerciseLoadMoreBtn = document.getElementById('exerciseLoadMoreBtn');
+  if (exerciseLoadMoreBtn) {
+    exerciseLoadMoreBtn.addEventListener('click', () => {
+      renderNextExerciseBatch();
     });
   }
 

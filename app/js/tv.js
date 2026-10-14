@@ -29,7 +29,7 @@
       if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
     });
     // Buttons nested inside an already-focusable card are redundant stops; click bubbles to the card.
-    root.querySelectorAll('.program-card button, .workout-card button.workout-card-play-btn').forEach(b => {
+    root.querySelectorAll('.program-card button, .workout-card button, .program-workout-item button').forEach(b => {
       b.setAttribute('tabindex', '-1');
     });
   }
