@@ -4,7 +4,7 @@
  * and Network-First for API requests with offline cache fallback.
  */
 
-const CACHE_NAME = 'menovation-offline-v9';
+const CACHE_NAME = 'menovation-offline-v10';
 
 const STATIC_PRECACHE_URLS = [
   './',
@@ -24,6 +24,7 @@ const STATIC_PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Pre-caching offline app shell');
@@ -45,7 +46,7 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -63,13 +64,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-First for static assets (fonts, images, CSS, scripts, pre-bundled JSON)
+  // Network-First with Cache Fallback for dynamic JSON data, scripts, and stylesheets
+  // Ensures online users always receive fresh data and updates, with full offline fallback
+  if (
+    requestUrl.pathname.includes('/assets/data/') ||
+    event.request.destination === 'script' ||
+    event.request.destination === 'style'
+  ) {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // Cache-First for static fonts and branding images
   if (
     event.request.destination === 'font' ||
     event.request.destination === 'image' ||
-    event.request.destination === 'style' ||
-    event.request.destination === 'script' ||
-    requestUrl.pathname.includes('/assets/')
+    requestUrl.pathname.includes('/assets/fonts/') ||
+    requestUrl.pathname.includes('/assets/images/')
   ) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
