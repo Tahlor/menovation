@@ -2020,6 +2020,168 @@ input[type="range"] {
   margin: 0;
 }
 
+.circuit-format-banner-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
+}
+
+/* Circuit Workout Layout: Header & Circuits First, Cooldown Video Flow at Bottom */
+#viewWorkoutPlayer.is-circuit-workout .workout-header-card {
+  order: 1;
+}
+
+#viewWorkoutPlayer.is-circuit-workout .circuits-breakdown-card {
+  order: 2;
+}
+
+#viewWorkoutPlayer.is-circuit-workout .video-wrapper {
+  order: 3;
+}
+
+#viewWorkoutPlayer.is-circuit-workout .player-controls-bar {
+  order: 4;
+}
+
+/* Structured Coaching Tips Box */
+.circuit-coaching-tip {
+  background: #faf6f8;
+  border-left: 3px solid var(--mvn-purple);
+  border-radius: 0 var(--mvn-radius-sm) var(--mvn-radius-sm) 0;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.circuit-coaching-tip .tip-icon {
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.circuit-coaching-tip .tip-body strong {
+  font-size: 0.78rem;
+  color: var(--mvn-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.circuit-coaching-tip .tip-body p {
+  font-size: 0.88rem;
+  color: var(--mvn-dark);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Timed Prepare Interval */
+.circuit-prepare-indicator {
+  background: var(--mvn-light-cream);
+  border: 1px dashed var(--mvn-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.5rem 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--mvn-purple);
+}
+
+/* Cooldown Poses & Dock Banner */
+.circuit-cooldown-block {
+  border-left: 4px solid var(--mvn-gold);
+}
+
+.cooldown-poses-card {
+  background: var(--mvn-cream);
+  border: 1px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.cooldown-poses-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--mvn-purple);
+  margin-bottom: 0.45rem;
+}
+
+.cooldown-poses-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cooldown-pose-chip {
+  background: var(--mvn-white);
+  border: 1px solid var(--mvn-sand);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  color: var(--mvn-dark);
+}
+
+.cooldown-dock-banner {
+  background: linear-gradient(135deg, rgba(119, 0, 83, 0.06), rgba(201, 242, 119, 0.12));
+  border: 1px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.85rem 1.15rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.cooldown-dock-banner h4 {
+  color: var(--mvn-purple);
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.cooldown-dock-banner p {
+  color: var(--mvn-gray-600);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Interactive Circuit Exercise Set Check Button */
+.circuit-exercise-check-btn {
+  background: var(--mvn-white);
+  border: 1.5px solid var(--mvn-sand);
+  color: var(--mvn-gray-400);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.circuit-exercise-check-btn:hover {
+  border-color: var(--mvn-purple);
+  color: var(--mvn-purple);
+}
+
+.circuit-exercise-card.completed {
+  opacity: 0.65;
+  background-color: #f7f9f4;
+  border-color: #d2e5b8;
+}
+
+.circuit-exercise-card.completed .circuit-exercise-check-btn {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: #fff;
+}
+
 /* ========================================================================== */
 /* EXERCISE LIBRARY GRID                                                     */
 /* ========================================================================== */

@@ -950,6 +950,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Workout Format & Cooldown Video Notice
     const isCooldown = currentWorkout.videoType === 'cooldown';
+    const playerView = document.getElementById('viewWorkoutPlayer');
+    if (playerView) {
+      if (isCooldown) {
+        playerView.classList.add('is-circuit-workout');
+      } else {
+        playerView.classList.remove('is-circuit-workout');
+      }
+    }
+
     const formatNotice = document.getElementById('playerWorkoutFormatNotice');
     if (formatNotice) {
       if (isCooldown) {
@@ -959,10 +968,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="banner-icon">⚡</div>
             <div class="banner-content">
               <strong>Structured Circuit Workout &bull; Guided Cooldown Video Flow</strong>
-              <p>Perform the targeted exercises, sets, reps, and timed intervals listed in the interactive circuits below. The video player above provides your guided cooldown flow to conclude your session.</p>
+              <p>Perform the targeted exercises, sets, reps, and timed intervals listed in the interactive circuits below. Your guided cooldown flow video is ready at the bottom to conclude your session.</p>
+              <div class="circuit-format-banner-actions">
+                <button class="btn btn-sm btn-purple" id="bannerJumpCooldownBtn">
+                  🧘 Jump to Cooldown Video &darr;
+                </button>
+                <button class="btn btn-sm btn-secondary" id="bannerPreviewPipBtn">
+                  ▶ Preview in Floating Mini-Player
+                </button>
+              </div>
             </div>
           </div>
         `;
+        const jumpBtn = formatNotice.querySelector('#bannerJumpCooldownBtn');
+        if (jumpBtn) {
+          jumpBtn.addEventListener('click', () => {
+            const target = document.getElementById('cooldownSection') || videoWrapper;
+            if (target) {
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          });
+        }
+        const previewPipBtn = formatNotice.querySelector('#bannerPreviewPipBtn');
+        if (previewPipBtn) {
+          previewPipBtn.addEventListener('click', () => {
+            previewWorkoutInPiP(currentWorkout.workoutPostId);
+          });
+        }
       } else {
         formatNotice.style.display = 'none';
         formatNotice.innerHTML = '';
@@ -995,9 +1027,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Parse and render circuits
     circuitsContainer.innerHTML = '';
-    const rawCircuits = currentWorkout.circuitsCopy || '';
-    if (rawCircuits) {
-      renderCircuitBreakdown(rawCircuits, circuitsContainer);
+    if (currentWorkout.circuits && currentWorkout.circuits.length > 0) {
+      renderStructuredCircuits(currentWorkout.circuits, circuitsContainer);
+    } else if (currentWorkout.circuitsCopy) {
+      renderCircuitBreakdown(currentWorkout.circuitsCopy, circuitsContainer);
     } else {
       circuitsContainer.innerHTML = '<p style="color:var(--mvn-gray-600); font-style:italic;">Follow along directly with the full-length video coach.</p>';
     }
@@ -1425,7 +1458,186 @@ document.addEventListener('DOMContentLoaded', async () => {
     return bestEx;
   }
 
-  // --- CIRCUIT BREAKDOWN RENDERER ---
+  // --- STRUCTURED CIRCUITS RENDERER (DIRECT IDS & METADATA) ---
+  function renderStructuredCircuits(circuits, container) {
+    container.innerHTML = '';
+
+    circuits.forEach((c) => {
+      const block = document.createElement('div');
+      block.className = `circuit-block ${c.isCooldown ? 'circuit-cooldown-block' : ''}`;
+      if (c.isCooldown) {
+        block.id = 'cooldownSection';
+      }
+
+      const headerEl = document.createElement('div');
+      headerEl.className = 'circuit-header';
+      headerEl.innerHTML = `
+        <div class="circuit-header-left">
+          <span class="circuit-badge ${c.isCooldown ? 'badge-sand' : ''}">Part ${c.circuitIndex || ''}</span>
+          <h3 class="circuit-header-title">${cleanText(c.title)}</h3>
+        </div>
+        ${c.rounds && c.rounds > 1 ? `<div class="circuit-rounds-badge">${c.rounds} Rounds</div>` : ''}
+      `;
+      block.appendChild(headerEl);
+
+      // Coaching tip
+      if (c.coachingTip) {
+        const tipDiv = document.createElement('div');
+        tipDiv.className = 'circuit-coaching-tip';
+        tipDiv.innerHTML = `
+          <span class="tip-icon">💬</span>
+          <div class="tip-body">
+            <strong>Coach's Guidance:</strong>
+            <p>${cleanText(c.coachingTip)}</p>
+          </div>
+        `;
+        block.appendChild(tipDiv);
+      }
+
+      // Cooldown poses & dock callout
+      if (c.isCooldown && c.cooldownPoses && c.cooldownPoses.length > 0) {
+        const posesDiv = document.createElement('div');
+        posesDiv.className = 'cooldown-poses-card';
+        posesDiv.innerHTML = `
+          <div class="cooldown-poses-title">🧘 Poses in this Guided Flow:</div>
+          <div class="cooldown-poses-list">
+            ${c.cooldownPoses.map(p => `<span class="cooldown-pose-chip">${cleanText(p)}</span>`).join('')}
+          </div>
+        `;
+        block.appendChild(posesDiv);
+
+        const dockNotice = document.createElement('div');
+        dockNotice.className = 'cooldown-dock-banner';
+        dockNotice.innerHTML = `
+          <h4>🧘 Guided Cooldown Video Below</h4>
+          <p>Follow along with the coach in the video below to stretch and conclude your session.</p>
+        `;
+        block.appendChild(dockNotice);
+      }
+
+      // Exercise List
+      const exList = document.createElement('div');
+      exList.className = 'circuit-exercises-list';
+
+      (c.items || []).forEach(item => {
+        if (item.type === 'prepare') {
+          const prepDiv = document.createElement('div');
+          prepDiv.className = 'circuit-prepare-indicator';
+          prepDiv.innerHTML = `
+            <span>⚡ Get Ready</span>
+            <span class="prepare-time">⏱️ ${item.duration}s</span>
+          `;
+          exList.appendChild(prepDiv);
+        } else if (item.type === 'rest') {
+          const restDiv = document.createElement('div');
+          restDiv.className = 'circuit-rest-indicator';
+          restDiv.innerHTML = `
+            <div class="rest-left">
+              <span>☕</span>
+              <span>Rest &amp; Recovery</span>
+            </div>
+            <span class="rest-time">⏱️ ${item.duration}s</span>
+          `;
+          exList.appendChild(restDiv);
+        } else if (item.type === 'exercise') {
+          let matchedEx = null;
+          if (item.exercisePostId && exercisesData) {
+            matchedEx = exercisesData[String(item.exercisePostId)];
+          }
+          if (!matchedEx) {
+            matchedEx = findExerciseByName(item.title);
+          }
+
+          const card = document.createElement('div');
+          card.className = 'circuit-exercise-card';
+
+          const exDetail = item.repQuantity ? `${item.repQuantity} ${item.repUnit || 'Reps'}` : (item.duration ? `${item.duration} seconds` : '');
+
+          if (matchedEx) {
+            const gifUrl = getGifUrl(matchedEx.gifUrl);
+            card.innerHTML = `
+              <div class="circuit-exercise-thumb-frame" title="Click for fullscreen demonstration">
+                ${gifUrl ? `
+                  <img src="${gifUrl}" alt="${matchedEx.exerciseTitle}" class="circuit-exercise-gif" loading="lazy" onerror="if(!this.dataset.retried){this.dataset.retried='1'; setTimeout(()=>{this.src='${gifUrl}';},1200);}else{this.onerror=null; this.src='assets/images/menovation-sq-purple-300.png';}">
+                  <button class="expand-gif-overlay-btn" title="View Fullscreen Demo" data-exid="${matchedEx.exerciseId}">⛶</button>
+                ` : `
+                  <div class="circuit-exercise-placeholder-icon">💪</div>
+                `}
+              </div>
+              <div class="circuit-exercise-info">
+                <div class="circuit-exercise-title-row">
+                  <h4 class="circuit-exercise-name">${cleanText(item.title || matchedEx.exerciseTitle)}</h4>
+                  ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
+                </div>
+                <div class="circuit-exercise-meta">
+                  ${matchedEx.usesWeights ? '<span class="badge badge-purple badge-xs">Weights</span>' : ''}
+                  ${matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bands</span>' : ''}
+                  ${!matchedEx.usesWeights && !matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bodyweight</span>' : ''}
+                </div>
+                <button class="circuit-exercise-view-modal-btn" data-exid="${matchedEx.exerciseId}">
+                  Form Cues &amp; Tips &rarr;
+                </button>
+              </div>
+              <button class="circuit-exercise-check-btn" title="Mark set complete" aria-label="Mark set complete">
+                ✓
+              </button>
+            `;
+
+            const expandBtn = card.querySelector('.expand-gif-overlay-btn');
+            if (expandBtn) {
+              expandBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openExerciseModal(matchedEx);
+              });
+            }
+            const modalBtn = card.querySelector('.circuit-exercise-view-modal-btn');
+            if (modalBtn) {
+              modalBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openExerciseModal(matchedEx);
+              });
+            }
+            const thumbFrame = card.querySelector('.circuit-exercise-thumb-frame');
+            if (thumbFrame) {
+              thumbFrame.addEventListener('click', () => openExerciseModal(matchedEx));
+            }
+          } else {
+            card.innerHTML = `
+              <div class="circuit-exercise-thumb-frame">
+                <div class="circuit-exercise-placeholder-icon">⚡</div>
+              </div>
+              <div class="circuit-exercise-info">
+                <div class="circuit-exercise-title-row">
+                  <h4 class="circuit-exercise-name">${cleanText(item.title)}</h4>
+                  ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
+                </div>
+              </div>
+              <button class="circuit-exercise-check-btn" title="Mark set complete" aria-label="Mark set complete">
+                ✓
+              </button>
+            `;
+          }
+
+          const checkBtn = card.querySelector('.circuit-exercise-check-btn');
+          if (checkBtn) {
+            checkBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              card.classList.toggle('completed');
+            });
+          }
+
+          exList.appendChild(card);
+        }
+      });
+
+      if (exList.children.length > 0) {
+        block.appendChild(exList);
+      }
+      container.appendChild(block);
+    });
+  }
+
+  // --- CIRCUIT BREAKDOWN RENDERER (FALLBACK FOR LEGACY TEXT) ---
   function renderCircuitBreakdown(text, container) {
     container.innerHTML = '';
     const cleaned = cleanText(text);

@@ -127,6 +127,20 @@ assert(w6225.circuitsCopy.includes('Circuit 3: Strength (Lower)'), 'Circuits con
 assert(w6225.circuitsCopy.includes('Glute Bridge with 2 Sec Hold — 10 Reps'), 'Circuits contain exercises with reps');
 assert(w6225.circuitsCopy.includes('Cool Down: Cooldown'), 'Circuits contain Cooldown flow');
 
+// Structured circuits audit
+assert(Array.isArray(w6225.circuits), 'w6225.circuits is an array');
+assert(w6225.circuits.length === 7, `w6225 has 7 structured circuits (found ${w6225.circuits.length})`);
+assert(w6225.circuits[0].title === 'Warmup', 'Circuit 1 title is Warmup');
+assert(w6225.circuits[0].coachingTip.includes('Bodyweight only'), 'Circuit 1 coachingTip preserved');
+assert(w6225.circuits[6].isCooldown === true, 'Circuit 7 is flagged as cooldown');
+assert(w6225.circuits[6].cooldownPoses.length >= 3, 'Circuit 7 has structured cooldownPoses');
+
+let structuredCircuitsCount = 0;
+for (const w of Object.values(workoutsIndex)) {
+  if (Array.isArray(w.circuits) && w.circuits.length > 0) structuredCircuitsCount++;
+}
+assert(structuredCircuitsCount === 242, `Exactly 242 workouts have structured circuits (found ${structuredCircuitsCount})`);
+
 
 // --- 4. Code & UI Integrity Verification ---
 console.log('\n--- 4. Auditing App Code and Styles ---');
@@ -140,6 +154,11 @@ assert(appJs.includes('previewWorkoutInPiP'), 'app.js defines and calls previewW
 assert(appJs.includes('workout-card-preview-btn'), 'app.js renders workout-card-preview-btn in All Workouts');
 assert(appJs.includes('workout-card-open-btn'), 'app.js renders workout-card-open-btn in All Workouts');
 assert(appJs.includes('playerWorkoutFormatNotice'), 'app.js references playerWorkoutFormatNotice');
+assert(appJs.includes('renderStructuredCircuits'), 'app.js defines renderStructuredCircuits');
+assert(appJs.includes('is-circuit-workout'), 'app.js toggles is-circuit-workout class');
+assert(appJs.includes('bannerJumpCooldownBtn'), 'app.js binds jump to cooldown button');
+assert(appJs.includes('circuit-coaching-tip'), 'app.js renders circuit-coaching-tip');
+assert(appJs.includes('circuit-exercise-check-btn'), 'app.js renders circuit-exercise-check-btn');
 assert(!appJs.includes("Replay ▶' : 'Start ▶'"), 'Old "Start ▶" action pill completely replaced');
 
 assert(indexHtml.includes('id="playerWorkoutFormatNotice"'), 'index.html has playerWorkoutFormatNotice container');
@@ -150,6 +169,10 @@ assert(appCss.includes('.workout-open-btn'), 'app.css styles .workout-open-btn')
 assert(appCss.includes('.workout-card-actions'), 'app.css styles .workout-card-actions');
 assert(appCss.includes('.circuit-format-banner'), 'app.css styles .circuit-format-banner');
 assert(appCss.includes('.program-hero-paragraph'), 'app.css styles .program-hero-paragraph');
+assert(appCss.includes('#viewWorkoutPlayer.is-circuit-workout'), 'app.css configures circuit workout layout ordering');
+assert(appCss.includes('.circuit-coaching-tip'), 'app.css styles .circuit-coaching-tip');
+assert(appCss.includes('.circuit-exercise-check-btn'), 'app.css styles .circuit-exercise-check-btn');
+assert(appCss.includes('.cooldown-dock-banner'), 'app.css styles .cooldown-dock-banner');
 
 console.log('\n====================================================');
 console.log(`TOTAL: ${passed} PASSED, ${failed} FAILED`);
