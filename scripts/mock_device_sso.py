@@ -15,6 +15,7 @@ from urllib.parse import urlparse, parse_qs
 TTL, INTERVAL, REDEEM_TTL = 600, 2, 60
 DEVICES = {}   # device_code -> dict(user_code, expires, status, redeem_token)
 REDEEMS = {}   # redeem_token -> expires
+MOCK_USER_DATA = {"username": "taylor", "resume": None, "completedWorkouts": [], "diary": []}
 ALPHABET = "BCDFGHJKLMNPQRSTVWXZ"  # no vowels/ambiguous chars
 
 
@@ -60,10 +61,18 @@ class H(BaseHTTPRequestHandler):
                 d["status"] = "consumed"
                 return self._json(dict(status="approved", redeem_token=tok))
             return self._json(dict(status=d["status"] if d["status"] != "consumed" else "expired"))
+        if path == "/sso/menovation/user-data":
+            global MOCK_USER_DATA
+            payload = self._body()
+            MOCK_USER_DATA.update(payload)
+            MOCK_USER_DATA["username"] = "taylor"
+            return self._json(dict(status="ok", username="taylor"))
         self._json(dict(error="not found"), 404)
 
     def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query)
+        if u.path == "/sso/menovation/user-data":
+            return self._json(MOCK_USER_DATA)
         if u.path == "/sso/device/approve":
             code = (q.get("code") or [""])[0].upper()
             for d in DEVICES.values():

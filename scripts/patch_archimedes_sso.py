@@ -197,11 +197,54 @@ def device_redeem():
     set_sso_cookie_on_response(response, token)
     response.headers["Cache-Control"] = "no-store, no-cache, max-age=0"
     return response
+
+@app.route('/sso/menovation/user-data', methods=['GET', 'POST', 'OPTIONS'], strict_slashes=False)
+def menovation_user_data():
+    if request.method == 'OPTIONS':
+        resp = jsonify({})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        resp.headers['Access-Control-Allow-Credentials'] = 'true'
+        return resp
+
+    user = get_authenticated_sso_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+
+    data_dir = os.path.expanduser('~/menovation_userdata')
+    os.makedirs(data_dir, exist_ok=True)
+    user_file = os.path.join(data_dir, f"{user.username}.json")
+
+    if request.method == 'POST':
+        payload = request.get_json(force=True, silent=True) or {}
+        payload["username"] = user.username
+        payload["serverUpdatedAt"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        with open(user_file, 'w') as f:
+            json.dump(payload, f, indent=2)
+        resp = jsonify({"status": "ok", "username": user.username})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Credentials'] = 'true'
+        return resp
+
+    # GET
+    if os.path.exists(user_file):
+        try:
+            with open(user_file, 'r') as f:
+                data = json.load(f)
+        except Exception:
+            data = {"username": user.username, "resume": None, "completedWorkouts": [], "diary": []}
+    else:
+        data = {"username": user.username, "resume": None, "completedWorkouts": [], "diary": []}
+
+    resp = jsonify(data)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Credentials'] = 'true'
+    return resp
 '''
 
 # Insert imports if missing
 if 'import threading' not in content:
-    content = 'import threading\nimport time\n' + content
+    content = 'import threading\nimport time\nimport json\nimport os\n' + content
 
 # Insert template
 insert_idx_tmpl = content.find('AGENT_ACCESS_TEMPLATE = BASE_STYLE +')
