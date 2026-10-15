@@ -583,7 +583,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      // 3. Resume State
+      // 3. Workout Performance Logs
+      let hasNewWorkoutLogs = false;
+      if (Array.isArray(data.workoutLogs)) {
+        const localWorkoutLogs = await window.mvnDB.getAll('workout_logs');
+        const localLogKeys = new Set(localWorkoutLogs.map(l => l.createdAt || l.date));
+        for (const log of data.workoutLogs) {
+          const key = log.createdAt || log.date;
+          if (!localLogKeys.has(key)) {
+            await window.mvnDB.put('workout_logs', log);
+            hasNewWorkoutLogs = true;
+          }
+        }
+      }
+
+      // 4. Resume State
       if (data.resume && data.resume.updatedAt) {
         try {
           const localResume = JSON.parse(localStorage.getItem('mvn_last_session'));
@@ -597,6 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Refresh views if new data was synced from server
       if (hasNewCompleted) renderAllWorkoutsList();
       if (hasNewDiary) loadDiaryHistory();
+      if (hasNewWorkoutLogs && currentWorkout) renderWorkoutPerformanceUI(currentWorkout);
 
       // Ensure server has any items that were only recorded locally (e.g. while offline)
       pushUserDataToServer();
@@ -607,9 +622,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function pushUserDataToServer() {
     try {
-      const [completed, diary] = await Promise.all([
+      const [completed, diary, workoutLogs] = await Promise.all([
         window.mvnDB.getAll('completed_workouts'),
-        window.mvnDB.getAll('symptom_logs')
+        window.mvnDB.getAll('symptom_logs'),
+        window.mvnDB.getAll('workout_logs')
       ]);
       let resume = null;
       try { resume = JSON.parse(localStorage.getItem('mvn_last_session')); } catch (_) {}
@@ -622,6 +638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           updatedAt: new Date().toISOString(),
           completedWorkouts: completed,
           diary: diary,
+          workoutLogs: workoutLogs,
           resume: resume
         })
       });
@@ -1046,10 +1063,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (playerControlsBar) topAnchor.appendChild(playerControlsBar);
     }
 
+    // Retrieve latest performance & workout log (if any)
+    const latestWorkoutLog = await window.mvnDB.getLatestWorkoutLog(workoutId);
+
     // Parse and render circuits
     circuitsContainer.innerHTML = '';
     if (currentWorkout.circuits && currentWorkout.circuits.length > 0) {
-      renderStructuredCircuits(currentWorkout.circuits, circuitsContainer);
+      renderStructuredCircuits(currentWorkout.circuits, circuitsContainer, latestWorkoutLog);
     } else if (currentWorkout.circuitsCopy) {
       renderCircuitBreakdown(currentWorkout.circuitsCopy, circuitsContainer);
     } else {
@@ -1099,6 +1119,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     showView('viewWorkoutPlayer');
+
+    // Render interactive Performance Log & Notes UI
+    await renderWorkoutPerformanceUI(currentWorkout, latestWorkoutLog);
   }
 
   function updateCompletionButtonUI(completed) {
@@ -1109,6 +1132,380 @@ document.addEventListener('DOMContentLoaded', async () => {
       markCompleteBtn.textContent = 'Mark Complete';
       markCompleteBtn.className = 'btn btn-success';
     }
+  }
+
+  // --- WORKOUT PERFORMANCE & NOTES LOG MANAGER ---
+  async function renderWorkoutPerformanceUI(workout, preloadedLog = null) {
+    const card = document.getElementById('workoutPerformanceCard');
+    const summaryBox = document.getElementById('perfSummaryBox');
+    const editorBox = document.getElementById('perfEditorBox');
+    const toggleBtn = document.getElementById('toggleLogEditorBtn');
+    const toast = document.getElementById('perfSaveToast');
+
+    if (!card || !workout) return;
+
+    const wid = String(workout.workoutPostId);
+    let latestLog = preloadedLog !== null ? preloadedLog : await window.mvnDB.getLatestWorkoutLog(wid);
+
+    // Feeling definitions
+    const feelings = [
+      { id: 'strong', icon: '💪', label: 'Strong & Confident' },
+      { id: 'energized', icon: '⚡', label: 'High Energy' },
+      { id: 'challenging', icon: '😅', label: 'Challenging / Pushed Hard' },
+      { id: 'restorative', icon: '🧘', label: 'Restorative & Fluid' },
+      { id: 'gentle', icon: '😴', label: 'Gentle / Low Energy' }
+    ];
+
+    // 1. Render Summary Display
+    function renderSummary() {
+      if (!summaryBox) return;
+
+      if (!latestLog) {
+        summaryBox.innerHTML = `
+          <div class="perf-empty-state">
+            <div class="perf-empty-icon">📝</div>
+            <h4>No Performance Logged Yet</h4>
+            <p>Track the weights (lbs), completed reps, and personal notes for this session to monitor your strength progression over time.</p>
+            <button class="btn btn-primary" id="perfStartLogBtn">
+              📝 Record Weights &amp; Notes
+            </button>
+          </div>
+        `;
+        const startBtn = summaryBox.querySelector('#perfStartLogBtn');
+        if (startBtn) {
+          startBtn.onclick = () => openEditor();
+        }
+        if (toggleBtn) toggleBtn.textContent = '✏️ Record Weights & Notes';
+        return;
+      }
+
+      if (toggleBtn) toggleBtn.textContent = '✏️ Edit / Record Notes';
+
+      const dateStr = new Date(latestLog.date || latestLog.createdAt).toLocaleDateString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      const feelObj = feelings.find(f => f.id === latestLog.feeling) || { icon: '🏋️', label: 'Completed' };
+      const exEntries = Object.values(latestLog.exercises || {}).filter(e => e && (e.weight || e.reps || e.notes));
+
+      summaryBox.innerHTML = `
+        <div class="perf-summary-card">
+          <div class="perf-summary-top">
+            <div class="perf-summary-meta">
+              <span class="perf-date-badge">📅 Last Session: <strong>${dateStr}</strong></span>
+              <span class="perf-feeling-badge">${feelObj.icon} ${feelObj.label}</span>
+            </div>
+            <div class="perf-summary-actions">
+              <button class="btn btn-sm btn-outline-purple" id="perfEditCurrentBtn">
+                ✏️ Edit This Entry
+              </button>
+              <button class="btn btn-sm btn-primary" id="perfLogNewSessionBtn">
+                + Record New Session
+              </button>
+            </div>
+          </div>
+
+          ${latestLog.sessionNotes ? `
+            <div class="perf-notes-quote">
+              <span class="quote-icon">💭</span>
+              <div class="quote-content">
+                <strong>Session Reflection:</strong>
+                <p>${cleanText(latestLog.sessionNotes)}</p>
+              </div>
+            </div>
+          ` : ''}
+
+          ${exEntries.length > 0 ? `
+            <div class="perf-logged-grid">
+              ${exEntries.map(e => `
+                <div class="perf-logged-item">
+                  <div class="perf-logged-name">${cleanText(e.title || 'Exercise')}</div>
+                  <div class="perf-logged-metrics">
+                    ${e.weight ? `<span class="perf-metric-chip weight">⚡ ${e.weight} lbs</span>` : ''}
+                    ${e.reps ? `<span class="perf-metric-chip reps">⏱️ ${e.reps} reps</span>` : ''}
+                  </div>
+                  ${e.notes ? `<div class="perf-logged-note">${cleanText(e.notes)}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          ` : '<p style="color:var(--mvn-gray-600); font-size:0.85rem; margin-top:0.5rem; font-style:italic;">No specific exercise weights logged for this session.</p>'}
+        </div>
+      `;
+
+      const editBtn = summaryBox.querySelector('#perfEditCurrentBtn');
+      if (editBtn) editBtn.onclick = () => openEditor(latestLog);
+
+      const newBtn = summaryBox.querySelector('#perfLogNewSessionBtn');
+      if (newBtn) newBtn.onclick = () => openEditor(null);
+    }
+
+    // 2. Open Log Editor
+    function openEditor(existingLog = null, focusExKey = null) {
+      if (!editorBox) return;
+
+      const isEdit = Boolean(existingLog);
+      const logData = existingLog ? JSON.parse(JSON.stringify(existingLog)) : {
+        workoutId: wid,
+        title: workout.title,
+        programId: workout.programPostId,
+        date: new Date().toISOString(),
+        feeling: 'strong',
+        sessionNotes: '',
+        exercises: {}
+      };
+
+      // Extract unique list of exercises from workout
+      const exerciseMap = new Map();
+      if (workout.circuits) {
+        workout.circuits.forEach(c => {
+          (c.items || []).forEach(item => {
+            if (item.type === 'exercise') {
+              const key = String(item.exercisePostId || item.title);
+              if (!exerciseMap.has(key)) {
+                exerciseMap.set(key, {
+                  exercisePostId: item.exercisePostId || null,
+                  title: item.title,
+                  repQuantity: item.repQuantity,
+                  repUnit: item.repUnit,
+                  duration: item.duration,
+                  circuitTitle: c.title
+                });
+              }
+            }
+          });
+        });
+      }
+
+      const exerciseList = Array.from(exerciseMap.values());
+
+      editorBox.style.display = 'block';
+      editorBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      editorBox.innerHTML = `
+        <div class="perf-editor-card">
+          <div class="perf-editor-header">
+            <h4>${isEdit ? '✏️ Edit Workout Performance Log' : '📝 Record New Workout Session'}</h4>
+            <p class="form-subtext">Record the weights you lifted, reps completed, and how your body responded.</p>
+          </div>
+
+          <!-- Feeling reaction selection -->
+          <div class="perf-form-section">
+            <label class="perf-label">How did you feel during this workout?</label>
+            <div class="perf-feeling-pills" id="perfFeelingPills">
+              ${feelings.map(f => `
+                <button type="button" class="perf-feeling-pill ${logData.feeling === f.id ? 'active' : ''}" data-feeling="${f.id}">
+                  ${f.icon} ${f.label}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Session Notes -->
+          <div class="perf-form-section">
+            <label class="perf-label" for="perfSessionNotesInput">Workout Notes &amp; Reflections:</label>
+            <textarea id="perfSessionNotesInput" class="form-control" rows="3" placeholder="How did this workout feel? Note any muscle soreness, energy changes, PRs, or weights you want to try next time...">${cleanText(logData.sessionNotes || '')}</textarea>
+          </div>
+
+          <!-- Exercise-by-Exercise Weights & Reps -->
+          ${exerciseList.length > 0 ? `
+            <div class="perf-form-section">
+              <label class="perf-label">Record Exercise Weights &amp; Reps:</label>
+              <div class="perf-exercises-list">
+                ${exerciseList.map((ex) => {
+                  const key = String(ex.exercisePostId || ex.title);
+                  let exLog = logData.exercises && logData.exercises[key] ? logData.exercises[key] : null;
+                  const prevExLog = latestLog && latestLog.exercises ? latestLog.exercises[key] : null;
+
+                  const currentWeight = exLog && exLog.weight !== undefined ? exLog.weight : (prevExLog && prevExLog.weight ? prevExLog.weight : 0);
+                  const currentReps = exLog && exLog.reps !== undefined ? exLog.reps : (prevExLog && prevExLog.reps ? prevExLog.reps : (ex.repQuantity || 10));
+                  const currentNote = exLog && exLog.notes ? exLog.notes : '';
+
+                  let matched = null;
+                  if (ex.exercisePostId && exercisesData) matched = exercisesData[String(ex.exercisePostId)];
+                  if (!matched) matched = findExerciseByName(ex.title);
+                  const gifUrl = matched ? getGifUrl(matched.gifUrl) : '';
+
+                  return `
+                    <div class="perf-ex-row" data-exkey="${key}">
+                      <div class="perf-ex-left">
+                        ${gifUrl ? `<img src="${gifUrl}" alt="" class="perf-ex-thumb" onerror="this.style.display='none';">` : '<div class="perf-ex-thumb-placeholder">💪</div>'}
+                        <div class="perf-ex-info">
+                          <h5 class="perf-ex-title">${cleanText(ex.title)}</h5>
+                          <span class="perf-ex-target">${ex.circuitTitle ? `${cleanText(ex.circuitTitle)} &bull; ` : ''}${ex.repQuantity ? `${ex.repQuantity} ${ex.repUnit || 'Reps'}` : (ex.duration ? `${ex.duration}s` : 'Reps')}</span>
+                          ${prevExLog && (prevExLog.weight || prevExLog.reps) ? `
+                            <button type="button" class="perf-use-prev-link" data-exkey="${key}" data-weight="${prevExLog.weight || 0}" data-reps="${prevExLog.reps || 10}">
+                              ⚡ Use Last: ${prevExLog.weight ? `${prevExLog.weight} lbs` : ''}${prevExLog.reps ? ` × ${prevExLog.reps}` : ''}
+                            </button>
+                          ` : ''}
+                        </div>
+                      </div>
+
+                      <div class="perf-ex-controls">
+                        <div class="perf-stepper-group">
+                          <label>Weight (lbs)</label>
+                          <div class="perf-stepper-box">
+                            <button type="button" class="perf-step-btn btn-sub-weight" data-delta="-5">-5</button>
+                            <input type="number" class="perf-step-input input-weight" value="${currentWeight}" step="2.5" min="0">
+                            <button type="button" class="perf-step-btn btn-add-weight" data-delta="5">+5</button>
+                          </div>
+                        </div>
+
+                        <div class="perf-stepper-group">
+                          <label>Reps Done</label>
+                          <div class="perf-stepper-box">
+                            <button type="button" class="perf-step-btn btn-sub-reps" data-delta="-1">-1</button>
+                            <input type="number" class="perf-step-input input-reps" value="${currentReps}" step="1" min="0">
+                            <button type="button" class="perf-step-btn btn-add-reps" data-delta="1">+1</button>
+                          </div>
+                        </div>
+
+                        <div class="perf-stepper-group note-group">
+                          <label>Notes</label>
+                          <input type="text" class="perf-note-input input-note" placeholder="Form cue, ease, etc..." value="${cleanText(currentNote)}">
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Form Buttons -->
+          <div class="perf-editor-actions">
+            <button type="button" class="btn btn-primary" id="savePerfLogBtn">
+              💾 Save Workout Performance Log
+            </button>
+            <button type="button" class="btn btn-secondary" id="cancelPerfEditorBtn">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Wire feeling buttons
+      const feelingPills = editorBox.querySelectorAll('#perfFeelingPills .perf-feeling-pill');
+      let chosenFeeling = logData.feeling || 'strong';
+      feelingPills.forEach(btn => {
+        btn.addEventListener('click', () => {
+          feelingPills.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          chosenFeeling = btn.dataset.feeling;
+        });
+      });
+
+      // Wire stepper buttons
+      editorBox.querySelectorAll('.perf-ex-row').forEach(row => {
+        const weightInput = row.querySelector('.input-weight');
+        const repsInput = row.querySelector('.input-reps');
+
+        row.querySelector('.btn-sub-weight').addEventListener('click', () => {
+          weightInput.value = Math.max(0, (parseFloat(weightInput.value) || 0) - 5);
+        });
+        row.querySelector('.btn-add-weight').addEventListener('click', () => {
+          weightInput.value = (parseFloat(weightInput.value) || 0) + 5;
+        });
+        row.querySelector('.btn-sub-reps').addEventListener('click', () => {
+          repsInput.value = Math.max(0, (parseInt(repsInput.value) || 0) - 1);
+        });
+        row.querySelector('.btn-add-reps').addEventListener('click', () => {
+          repsInput.value = (parseInt(repsInput.value) || 0) + 1;
+        });
+
+        const usePrevBtn = row.querySelector('.perf-use-prev-link');
+        if (usePrevBtn) {
+          usePrevBtn.addEventListener('click', () => {
+            weightInput.value = usePrevBtn.dataset.weight;
+            repsInput.value = usePrevBtn.dataset.reps;
+          });
+        }
+      });
+
+      // If requested to focus a specific exercise
+      if (focusExKey) {
+        const targetRow = editorBox.querySelector(`.perf-ex-row[data-exkey="${focusExKey}"]`);
+        if (targetRow) {
+          targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          targetRow.classList.add('highlight-pulse');
+          setTimeout(() => targetRow.classList.remove('highlight-pulse'), 2500);
+        }
+      }
+
+      // Wire Cancel button
+      const cancelBtn = editorBox.querySelector('#cancelPerfEditorBtn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          editorBox.style.display = 'none';
+        });
+      }
+
+      // Wire Save button
+      const saveBtn = editorBox.querySelector('#savePerfLogBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          const notes = editorBox.querySelector('#perfSessionNotesInput').value.trim();
+          const collectedExercises = {};
+
+          editorBox.querySelectorAll('.perf-ex-row').forEach(row => {
+            const key = row.dataset.exkey;
+            const titleEl = row.querySelector('.perf-ex-title');
+            const weightVal = parseFloat(row.querySelector('.input-weight').value) || 0;
+            const repsVal = parseInt(row.querySelector('.input-reps').value) || 0;
+            const noteVal = row.querySelector('.input-note').value.trim();
+
+            if (weightVal > 0 || repsVal > 0 || noteVal) {
+              collectedExercises[key] = {
+                title: titleEl ? titleEl.textContent : key,
+                weight: weightVal,
+                reps: repsVal,
+                notes: noteVal
+              };
+            }
+          });
+
+          const savePayload = {
+            workoutId: wid,
+            title: workout.title,
+            programId: workout.programPostId,
+            date: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            feeling: chosenFeeling,
+            sessionNotes: notes,
+            exercises: collectedExercises
+          };
+
+          await window.mvnDB.saveWorkoutLog(savePayload);
+          latestLog = savePayload;
+
+          editorBox.style.display = 'none';
+          renderSummary();
+          updateCompletionButtonUI(true);
+
+          if (toast) {
+            toast.textContent = '✓ Workout performance log & notes saved successfully!';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 4000);
+          }
+
+          // Trigger background sync to server
+          if (window.mvnSyncUpDebounced) window.mvnSyncUpDebounced();
+        });
+      }
+    }
+
+    // Expose openEditor helper globally for quick-log buttons
+    window.mvnOpenPerformanceEditor = (focusExKey = null) => openEditor(latestLog, focusExKey);
+
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        if (editorBox.style.display === 'none') {
+          openEditor(latestLog);
+        } else {
+          editorBox.style.display = 'none';
+        }
+      };
+    }
+
+    renderSummary();
   }
 
   markCompleteBtn.addEventListener('click', async () => {
@@ -1527,6 +1924,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let runnerIsPaused = false;
   let runnerAutoAdvance = localStorage.getItem('mvn_circuit_autoadvance') !== 'false';
   let runnerSoundEnabled = localStorage.getItem('mvn_circuit_sound') !== 'false';
+  let runnerSessionLogs = { workoutId: null, title: '', programId: null, date: '', feeling: 'strong', sessionNotes: '', exercises: {} };
+  let runnerPreviousLog = null;
 
   // Web Audio Synthesizer for offline countdown chimes
   const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -1638,13 +2037,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     return steps;
   }
 
-  function openCircuitRunner(workout) {
+  async function openCircuitRunner(workout) {
     if (!workout) return;
     runnerSteps = buildRunnerSteps(workout);
     if (runnerSteps.length === 0) {
       alert('No structured circuit steps found for this workout.');
       return;
     }
+
+    runnerPreviousLog = await window.mvnDB.getLatestWorkoutLog(workout.workoutPostId);
+    runnerSessionLogs = {
+      workoutId: String(workout.workoutPostId),
+      title: workout.title,
+      programId: workout.programPostId,
+      date: new Date().toISOString(),
+      feeling: 'strong',
+      sessionNotes: '',
+      exercises: {}
+    };
 
     runnerCurrentIndex = 0;
     if (runnerOverlay) {
@@ -1875,6 +2285,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             ` : ''}
           </div>
 
+          <!-- Interactive Weight & Reps Quick Logger -->
+          <div class="runner-weight-reps-card">
+            <div class="runner-weight-reps-header">
+              <span class="runner-log-label">🏋️ Record Your Set:</span>
+              ${prevExLog && (prevExLog.weight || prevExLog.reps) ? `
+                <button type="button" class="runner-use-prev-btn" id="runnerUsePrevBtn" title="Fill with previous session">
+                  ⚡ Use Last: ${prevExLog.weight ? `${prevExLog.weight} lbs` : ''}${prevExLog.reps ? ` × ${prevExLog.reps}` : ''}
+                </button>
+              ` : ''}
+            </div>
+            <div class="runner-inputs-row">
+              <div class="runner-input-group">
+                <label>Weight (lbs)</label>
+                <div class="runner-stepper-box">
+                  <button type="button" class="runner-stepper-btn" id="runnerWeightMinusBtn">-5</button>
+                  <input type="number" class="runner-stepper-input" id="runnerWeightInput" value="${currentExLog.weight || 0}" step="2.5" min="0">
+                  <button type="button" class="runner-stepper-btn" id="runnerWeightPlusBtn">+5</button>
+                </div>
+              </div>
+              <div class="runner-input-group">
+                <label>Reps Done</label>
+                <div class="runner-stepper-box">
+                  <button type="button" class="runner-stepper-btn" id="runnerRepsMinusBtn">-1</button>
+                  <input type="number" class="runner-stepper-input" id="runnerRepsInput" value="${currentExLog.reps || step.repQuantity || 10}" step="1" min="0">
+                  <button type="button" class="runner-stepper-btn" id="runnerRepsPlusBtn">+1</button>
+                </div>
+              </div>
+            </div>
+            <div class="runner-note-row">
+              <input type="text" class="runner-ex-note-input" id="runnerExNoteInput" placeholder="Quick note on weight, form, or resistance (optional)..." value="${cleanText(currentExLog.notes || '')}">
+            </div>
+          </div>
+
           <div class="circuit-exercise-meta">
             ${matchedEx && matchedEx.usesWeights ? '<span class="badge badge-purple">Weights</span>' : ''}
             ${matchedEx && matchedEx.usesBands ? '<span class="badge badge-sand">Bands</span>' : ''}
@@ -1894,6 +2337,58 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>
     `;
     runnerStage.appendChild(card);
+
+    // Wire live logger inputs
+    const wInput = card.querySelector('#runnerWeightInput');
+    const rInput = card.querySelector('#runnerRepsInput');
+    const nInput = card.querySelector('#runnerExNoteInput');
+    const wSub = card.querySelector('#runnerWeightMinusBtn');
+    const wAdd = card.querySelector('#runnerWeightPlusBtn');
+    const rSub = card.querySelector('#runnerRepsMinusBtn');
+    const rAdd = card.querySelector('#runnerRepsPlusBtn');
+    const usePrev = card.querySelector('#runnerUsePrevBtn');
+
+    if (wSub && wInput) {
+      wSub.onclick = () => {
+        wInput.value = Math.max(0, (parseFloat(wInput.value) || 0) - 5);
+        currentExLog.weight = parseFloat(wInput.value) || 0;
+      };
+    }
+    if (wAdd && wInput) {
+      wAdd.onclick = () => {
+        wInput.value = (parseFloat(wInput.value) || 0) + 5;
+        currentExLog.weight = parseFloat(wInput.value) || 0;
+      };
+    }
+    if (wInput) {
+      wInput.oninput = () => { currentExLog.weight = Math.max(0, parseFloat(wInput.value) || 0); };
+    }
+    if (rSub && rInput) {
+      rSub.onclick = () => {
+        rInput.value = Math.max(0, (parseInt(rInput.value) || 0) - 1);
+        currentExLog.reps = parseInt(rInput.value) || 0;
+      };
+    }
+    if (rAdd && rInput) {
+      rAdd.onclick = () => {
+        rInput.value = (parseInt(rInput.value) || 0) + 1;
+        currentExLog.reps = parseInt(rInput.value) || 0;
+      };
+    }
+    if (rInput) {
+      rInput.oninput = () => { currentExLog.reps = Math.max(0, parseInt(rInput.value) || 0); };
+    }
+    if (nInput) {
+      nInput.oninput = () => { currentExLog.notes = nInput.value.trim(); };
+    }
+    if (usePrev && prevExLog) {
+      usePrev.onclick = () => {
+        wInput.value = prevExLog.weight || 0;
+        rInput.value = prevExLog.reps || 10;
+        currentExLog.weight = prevExLog.weight || 0;
+        currentExLog.reps = prevExLog.reps || 10;
+      };
+    }
 
     if (isTimed) {
       runnerFooterCenter.innerHTML = `
@@ -1933,6 +2428,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderCooldownStep(step) {
     const card = document.createElement('div');
     card.className = 'runner-card runner-cooldown-card';
+
+    // Summary of recorded exercises
+    const recordedEntries = Object.values(runnerSessionLogs.exercises || {}).filter(e => e && (e.weight || e.reps || e.notes));
+
     card.innerHTML = `
       <div class="runner-cooldown-celebrate">
         <h3>🎉 Circuits Completed! Amazing Work!</h3>
@@ -1950,6 +2449,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       <!-- Mount point for video player inside cooldown runner card -->
       <div id="runnerVideoAnchor"></div>
+
+      <!-- Session Finish & Reflections Box -->
+      <div class="runner-finish-log-box">
+        <h4 class="runner-finish-log-title">📝 Session Reflections &amp; Notes</h4>
+        
+        <div class="runner-feeling-picker">
+          <label class="runner-finish-label">How did this workout feel?</label>
+          <div class="runner-feeling-pills" id="runnerFinishFeelingPills">
+            <button type="button" class="runner-feeling-pill active" data-feeling="strong">💪 Strong</button>
+            <button type="button" class="runner-feeling-pill" data-feeling="energized">⚡ Energized</button>
+            <button type="button" class="runner-feeling-pill" data-feeling="challenging">😅 Challenging</button>
+            <button type="button" class="runner-feeling-pill" data-feeling="restorative">🧘 Restorative</button>
+            <button type="button" class="runner-feeling-pill" data-feeling="gentle">😴 Gentle</button>
+          </div>
+        </div>
+
+        <div class="runner-notes-field">
+          <label class="runner-finish-label">Personal Workout Notes:</label>
+          <textarea id="runnerFinishSessionNotes" class="runner-finish-textarea" rows="2" placeholder="Record how your body felt, energy levels, milestones, weights to try next time..."></textarea>
+        </div>
+
+        ${recordedEntries.length > 0 ? `
+          <div class="runner-recorded-recap">
+            <label class="runner-finish-label">Weights &amp; Reps Recorded Today:</label>
+            <div class="runner-recap-grid">
+              ${recordedEntries.map(e => `
+                <div class="runner-recap-chip">
+                  <strong>${cleanText(e.title)}:</strong> ${e.weight ? `${e.weight} lbs` : ''}${e.reps ? ` × ${e.reps}` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
     `;
     runnerStage.appendChild(card);
 
@@ -1962,23 +2495,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       videoPlayer.play().catch(() => {});
     }
 
+    // Feeling pills toggle
+    const finishPills = card.querySelectorAll('#runnerFinishFeelingPills .runner-feeling-pill');
+    let finishFeeling = 'strong';
+    finishPills.forEach(pill => {
+      pill.onclick = () => {
+        finishPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        finishFeeling = pill.dataset.feeling;
+      };
+    });
+
     runnerFooterCenter.innerHTML = `
-      <button class="btn btn-success btn-lg" id="runnerFinishBtn">✓ Finish &amp; Mark Complete</button>
+      <button class="btn btn-success btn-lg" id="runnerFinishBtn">✓ Finish &amp; Save Workout Log</button>
     `;
     const finishBtn = runnerFooterCenter.querySelector('#runnerFinishBtn');
     if (finishBtn) {
       finishBtn.onclick = async () => {
         if (currentWorkout) {
-          const wid = String(currentWorkout.workoutPostId);
-          await window.mvnDB.put('completed_workouts', {
-            workoutId: wid,
-            title: currentWorkout.title,
-            programId: currentWorkout.programPostId,
-            completedAt: new Date().toISOString()
-          });
+          const notesEl = card.querySelector('#runnerFinishSessionNotes');
+          runnerSessionLogs.sessionNotes = notesEl ? notesEl.value.trim() : '';
+          runnerSessionLogs.feeling = finishFeeling;
+
+          await window.mvnDB.saveWorkoutLog(runnerSessionLogs);
           updateCompletionButtonUI(true);
+          if (window.mvnSyncUpDebounced) window.mvnSyncUpDebounced();
+          exitCircuitRunner();
+          await renderWorkoutPerformanceUI(currentWorkout);
         }
-        exitCircuitRunner();
       };
     }
   }
@@ -2061,7 +2605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // --- STRUCTURED CIRCUITS RENDERER (DIRECT IDS & METADATA) ---
-  function renderStructuredCircuits(circuits, container) {
+  function renderStructuredCircuits(circuits, container, latestLog = null) {
     container.innerHTML = '';
 
     circuits.forEach((c) => {
@@ -2162,6 +2706,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const exDetail = item.repQuantity ? `${item.repQuantity} ${item.repUnit || 'Reps'}` : (item.duration ? `${item.duration} seconds` : '');
 
+          const exKey = String(item.exercisePostId || item.title);
+          const loggedEx = latestLog && latestLog.exercises ? latestLog.exercises[exKey] : null;
+
           if (matchedEx) {
             const gifUrl = getGifUrl(matchedEx.gifUrl);
             card.innerHTML = `
@@ -2182,10 +2729,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                   ${matchedEx.usesWeights ? '<span class="badge badge-purple badge-xs">Weights</span>' : ''}
                   ${matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bands</span>' : ''}
                   ${!matchedEx.usesWeights && !matchedEx.usesBands ? '<span class="badge badge-sand badge-xs">Bodyweight</span>' : ''}
+                  ${loggedEx && (loggedEx.weight || loggedEx.reps) ? `
+                    <span class="circuit-last-weight-chip" title="Previous performance recorded">
+                      ⚡ Last: ${loggedEx.weight ? `${loggedEx.weight} lbs` : ''}${loggedEx.reps ? ` × ${loggedEx.reps}` : ''}
+                    </span>
+                  ` : ''}
                 </div>
-                <button class="circuit-exercise-view-modal-btn" data-exid="${matchedEx.exerciseId}">
-                  Form Cues &amp; Tips &rarr;
-                </button>
+                <div class="circuit-exercise-actions-bar">
+                  <button class="circuit-exercise-view-modal-btn" data-exid="${matchedEx.exerciseId}">
+                    Form Cues &amp; Tips &rarr;
+                  </button>
+                  <button class="circuit-quick-log-btn" data-exkey="${exKey}" title="Quickly record weights &amp; reps">
+                    ✏️ Log Set
+                  </button>
+                </div>
               </div>
               <button class="circuit-exercise-check-btn" title="Mark set complete" aria-label="Mark set complete">
                 ✓
@@ -2206,6 +2763,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 openExerciseModal(matchedEx);
               });
             }
+            const logBtn = card.querySelector('.circuit-quick-log-btn');
+            if (logBtn) {
+              logBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.mvnOpenPerformanceEditor) {
+                  window.mvnOpenPerformanceEditor(exKey);
+                }
+              });
+            }
+            const lastChip = card.querySelector('.circuit-last-weight-chip');
+            if (lastChip) {
+              lastChip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.mvnOpenPerformanceEditor) {
+                  window.mvnOpenPerformanceEditor(exKey);
+                }
+              });
+            }
             const thumbFrame = card.querySelector('.circuit-exercise-thumb-frame');
             if (thumbFrame) {
               thumbFrame.addEventListener('click', () => openExerciseModal(matchedEx));
@@ -2220,11 +2795,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <h4 class="circuit-exercise-name">${cleanText(item.title)}</h4>
                   ${exDetail ? `<span class="circuit-exercise-chip">⏱️ ${exDetail}</span>` : ''}
                 </div>
+                ${loggedEx && (loggedEx.weight || loggedEx.reps) ? `
+                  <div class="circuit-exercise-meta">
+                    <span class="circuit-last-weight-chip" title="Previous performance recorded">
+                      ⚡ Last: ${loggedEx.weight ? `${loggedEx.weight} lbs` : ''}${loggedEx.reps ? ` × ${loggedEx.reps}` : ''}
+                    </span>
+                  </div>
+                ` : ''}
+                <div class="circuit-exercise-actions-bar">
+                  <button class="circuit-quick-log-btn" data-exkey="${exKey}" title="Quickly record weights &amp; reps">
+                    ✏️ Log Set
+                  </button>
+                </div>
               </div>
               <button class="circuit-exercise-check-btn" title="Mark set complete" aria-label="Mark set complete">
                 ✓
               </button>
             `;
+            const logBtn = card.querySelector('.circuit-quick-log-btn');
+            if (logBtn) {
+              logBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.mvnOpenPerformanceEditor) {
+                  window.mvnOpenPerformanceEditor(exKey);
+                }
+              });
+            }
           }
 
           const checkBtn = card.querySelector('.circuit-exercise-check-btn');
@@ -2810,6 +3406,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     pushUserDataToServer();
   });
 
+  // Diary Subtabs Switching
+  const diaryTabSymptomsBtn = document.getElementById('diaryTabSymptomsBtn');
+  const diaryTabWorkoutsBtn = document.getElementById('diaryTabWorkoutsBtn');
+  const diarySymptomsSection = document.getElementById('diarySymptomsSection');
+  const diaryWorkoutsSection = document.getElementById('diaryWorkoutsSection');
+
+  if (diaryTabSymptomsBtn && diaryTabWorkoutsBtn) {
+    diaryTabSymptomsBtn.addEventListener('click', () => {
+      diaryTabSymptomsBtn.classList.add('active');
+      diaryTabWorkoutsBtn.classList.remove('active');
+      if (diarySymptomsSection) diarySymptomsSection.style.display = 'grid';
+      if (diaryWorkoutsSection) diaryWorkoutsSection.style.display = 'none';
+      loadDiaryHistory();
+    });
+
+    diaryTabWorkoutsBtn.addEventListener('click', () => {
+      diaryTabWorkoutsBtn.classList.add('active');
+      diaryTabSymptomsBtn.classList.remove('active');
+      if (diarySymptomsSection) diarySymptomsSection.style.display = 'none';
+      if (diaryWorkoutsSection) diaryWorkoutsSection.style.display = 'block';
+      loadWorkoutLogsHistory();
+    });
+  }
+
   async function loadDiaryHistory() {
     const container = document.getElementById('diaryHistoryContainer');
     if (!container) return;
@@ -2841,6 +3461,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${l.notes ? `<p style="font-size:0.85rem; color:var(--mvn-dark);">${l.notes}</p>` : ''}
       </div>
     `).join('');
+  }
+
+  async function loadWorkoutLogsHistory() {
+    const container = document.getElementById('diaryWorkoutLogsContainer');
+    const badge = document.getElementById('diaryWorkoutLogsStatsBadge');
+    if (!container) return;
+
+    const logs = await window.mvnDB.getWorkoutLogs();
+    if (badge) badge.textContent = `${logs.length} Recorded Session${logs.length === 1 ? '' : 's'}`;
+
+    if (logs.length === 0) {
+      container.innerHTML = `
+        <div class="diary-empty-state">
+          <span class="empty-icon">🏋️</span>
+          <h4>No Workout Performance Logs Recorded Yet</h4>
+          <p>When you complete workouts and log your dumbbell weights, completed reps, or notes, they will appear here in chronological order.</p>
+          <button class="btn btn-primary" onclick="navigateTo('#/workouts')" style="margin-top:0.75rem;">
+            Browse Workouts &rarr;
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    const feelings = [
+      { id: 'strong', icon: '💪', label: 'Strong & Confident' },
+      { id: 'energized', icon: '⚡', label: 'High Energy' },
+      { id: 'challenging', icon: '😅', label: 'Challenging / Pushed Hard' },
+      { id: 'restorative', icon: '🧘', label: 'Restorative & Fluid' },
+      { id: 'gentle', icon: '😴', label: 'Gentle / Low Energy' }
+    ];
+
+    container.innerHTML = logs.map(l => {
+      const feelObj = feelings.find(f => f.id === l.feeling) || { icon: '🏋️', label: 'Completed' };
+      const dateStr = new Date(l.date || l.createdAt).toLocaleDateString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      const exEntries = Object.values(l.exercises || {}).filter(e => e && (e.weight || e.reps || e.notes));
+
+      return `
+        <div class="diary-workout-log-card">
+          <div class="diary-wlog-top">
+            <div class="diary-wlog-title-box">
+              <span class="badge badge-purple">Workout #${l.workoutId}</span>
+              <h4 class="diary-wlog-title">${cleanText(l.title || 'Workout Session')}</h4>
+              <span class="diary-wlog-date">📅 ${dateStr}</span>
+            </div>
+            <div class="diary-wlog-actions">
+              <span class="perf-feeling-badge">${feelObj.icon} ${feelObj.label}</span>
+              <button class="btn btn-sm btn-outline-purple diary-open-workout-btn" data-wid="${l.workoutId}">
+                Open Workout &rarr;
+              </button>
+            </div>
+          </div>
+
+          ${l.sessionNotes ? `
+            <div class="perf-notes-quote" style="margin-top:0.6rem;">
+              <span class="quote-icon">💭</span>
+              <div class="quote-content">
+                <strong>Session Reflection:</strong>
+                <p>${cleanText(l.sessionNotes)}</p>
+              </div>
+            </div>
+          ` : ''}
+
+          ${exEntries.length > 0 ? `
+            <div class="diary-wlog-exercises">
+              <div class="diary-wlog-exercises-heading">Recorded Movement Performance:</div>
+              <div class="diary-wlog-pills">
+                ${exEntries.map(e => `
+                  <div class="diary-ex-pill">
+                    <strong class="diary-ex-pill-name">${cleanText(e.title || 'Exercise')}</strong>
+                    ${e.weight ? `<span class="diary-metric-tag weight">⚡ ${e.weight} lbs</span>` : ''}
+                    ${e.reps ? `<span class="diary-metric-tag reps">⏱️ ${e.reps} reps</span>` : ''}
+                    ${e.notes ? `<span class="diary-metric-tag notes">"${cleanText(e.notes)}"</span>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.diary-open-workout-btn').forEach(btn => {
+      btn.addEventListener('click', () => navigateTo('#/workout/' + btn.dataset.wid));
+    });
   }
 
   // Initialize

@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'menovation_offline_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 class MenovationDB {
   constructor() {
@@ -31,10 +31,16 @@ class MenovationDB {
           symptomStore.createIndex('date', 'date', { unique: false });
         }
 
-        // Workout completion logs
+        // Workout completion & performance logs
+        let workoutStore;
         if (!db.objectStoreNames.contains('workout_logs')) {
-          const workoutStore = db.createObjectStore('workout_logs', { keyPath: 'id', autoIncrement: true });
+          workoutStore = db.createObjectStore('workout_logs', { keyPath: 'id', autoIncrement: true });
           workoutStore.createIndex('date', 'date', { unique: false });
+        } else {
+          workoutStore = event.target.transaction.objectStore('workout_logs');
+        }
+        if (!workoutStore.indexNames.contains('workoutId')) {
+          workoutStore.createIndex('workoutId', 'workoutId', { unique: false });
         }
 
         // Completed workouts state
@@ -137,6 +143,50 @@ class MenovationDB {
   async getPendingMutations() {
     const all = await this.getAll('sync_outbox');
     return all.filter(item => item.status === 'pending');
+  }
+
+  // --- Workout Performance & Notes Methods ---
+  async getWorkoutLogs(workoutId = null) {
+    const all = await this.getAll('workout_logs');
+    if (!workoutId) {
+      return all.sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+    }
+    return all
+      .filter(log => String(log.workoutId) === String(workoutId))
+      .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+  }
+
+  async getLatestWorkoutLog(workoutId) {
+    const logs = await this.getWorkoutLogs(workoutId);
+    return logs.length > 0 ? logs[0] : null;
+  }
+
+  async saveWorkoutLog(logData) {
+    if (!logData.date) logData.date = new Date().toISOString();
+    if (!logData.createdAt) logData.createdAt = new Date().toISOString();
+    
+    // Save to workout_logs history store
+    const id = await this.put('workout_logs', logData);
+    
+    // Also mirror to completed_workouts for fast lastLog lookup & server sync
+    const wid = String(logData.workoutId);
+    const existing = await this.get('completed_workouts', wid) || {};
+    await this.put('completed_workouts', {
+      ...existing,
+      workoutId: wid,
+      title: logData.title || existing.title || ('Workout ' + wid),
+      programId: logData.programId || existing.programId || null,
+      completedAt: logData.date,
+      lastLog: {
+        ...logData,
+        id: id
+      }
+    });
+    return id;
+  }
+
+  async deleteWorkoutLog(id) {
+    return await this.delete('workout_logs', id);
   }
 }
 

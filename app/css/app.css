@@ -2949,3 +2949,820 @@ input[type="range"] {
   box-shadow: 0 6px 16px rgba(119, 0, 83, 0.35);
 }
 
+/* ==========================================================================
+   WORKOUT PERFORMANCE & NOTES LOGGING STYLES
+   ========================================================================== */
+.workout-performance-card {
+  background: var(--mvn-white);
+  border: 1.5px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.perf-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--mvn-light-sand);
+  padding-bottom: 0.75rem;
+}
+
+.perf-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.perf-header-icon {
+  font-size: 1.8rem;
+  background: var(--mvn-light-cream);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--mvn-sand);
+}
+
+.perf-header-title {
+  font-family: var(--mvn-font-heading);
+  font-size: 1.2rem;
+  color: var(--mvn-purple);
+  margin: 0;
+}
+
+.perf-header-sub {
+  font-size: 0.85rem;
+  color: var(--mvn-gray-600);
+  margin: 0.15rem 0 0;
+}
+
+.btn-outline-purple {
+  background: transparent;
+  border: 1.5px solid var(--mvn-purple);
+  color: var(--mvn-purple);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline-purple:hover {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+}
+
+.perf-save-toast {
+  background: linear-gradient(135deg, rgba(201, 242, 119, 0.35), rgba(76, 175, 80, 0.2));
+  border: 1.5px solid #8fc93a;
+  color: #1e4d0b;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mvn-radius-md);
+  margin-bottom: 0.85rem;
+  font-size: 0.92rem;
+}
+
+/* Latest Log Summary */
+.perf-summary-card {
+  background: var(--mvn-cream);
+  border: 1px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 1.1rem;
+}
+
+.perf-summary-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.perf-summary-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.perf-date-badge {
+  font-size: 0.9rem;
+  color: var(--mvn-dark);
+}
+
+.perf-feeling-badge {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.perf-summary-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.perf-notes-quote {
+  background: var(--mvn-white);
+  border-left: 4px solid var(--mvn-gold);
+  border-radius: 0 var(--mvn-radius-sm) var(--mvn-radius-sm) 0;
+  padding: 0.75rem 1rem;
+  margin: 0.85rem 0;
+  display: flex;
+  gap: 0.65rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.quote-icon {
+  font-size: 1.25rem;
+  color: var(--mvn-gold);
+}
+
+.quote-content strong {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--mvn-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+}
+
+.quote-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--mvn-dark);
+  line-height: 1.45;
+}
+
+.perf-logged-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.perf-logged-item {
+  background: var(--mvn-white);
+  border: 1px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0.65rem 0.85rem;
+}
+
+.perf-logged-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--mvn-dark);
+  margin-bottom: 0.3rem;
+}
+
+.perf-logged-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.perf-metric-chip.weight {
+  background: rgba(119, 0, 83, 0.08);
+  color: var(--mvn-purple);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+}
+
+.perf-metric-chip.reps {
+  background: rgba(221, 167, 79, 0.18);
+  color: #7d4f07;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+}
+
+.perf-logged-note {
+  font-size: 0.78rem;
+  color: var(--mvn-gray-600);
+  font-style: italic;
+  margin-top: 0.35rem;
+}
+
+.perf-empty-state {
+  text-align: center;
+  padding: 1.75rem 1rem;
+}
+
+.perf-empty-icon {
+  font-size: 2.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.perf-empty-state h4 {
+  font-size: 1.05rem;
+  color: var(--mvn-purple);
+  margin-bottom: 0.3rem;
+}
+
+.perf-empty-state p {
+  color: var(--mvn-gray-600);
+  font-size: 0.9rem;
+  max-width: 480px;
+  margin: 0 auto 1rem;
+}
+
+/* Interactive Performance Log Editor */
+.perf-editor-card {
+  background: var(--mvn-cream);
+  border: 1.5px solid var(--mvn-purple);
+  border-radius: var(--mvn-radius-md);
+  padding: 1.25rem;
+  margin-top: 0.85rem;
+  box-shadow: 0 4px 16px rgba(119, 0, 83, 0.08);
+}
+
+.perf-editor-header h4 {
+  color: var(--mvn-purple);
+  font-size: 1.1rem;
+  margin: 0 0 0.2rem;
+}
+
+.perf-form-section {
+  margin-top: 1.15rem;
+}
+
+.perf-label {
+  display: block;
+  font-weight: 700;
+  color: var(--mvn-purple);
+  font-size: 0.92rem;
+  margin-bottom: 0.45rem;
+}
+
+.perf-feeling-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.perf-feeling-pill {
+  background: var(--mvn-white);
+  border: 1.5px solid var(--mvn-sand);
+  color: var(--mvn-dark);
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.perf-feeling-pill:hover {
+  border-color: var(--mvn-purple);
+}
+
+.perf-feeling-pill.active {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+  border-color: var(--mvn-purple);
+  box-shadow: 0 2px 6px rgba(119, 0, 83, 0.25);
+}
+
+.perf-exercises-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.perf-ex-row {
+  background: var(--mvn-white);
+  border: 1px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.perf-ex-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 240px;
+  flex: 1;
+}
+
+.perf-ex-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: var(--mvn-radius-sm);
+  background: var(--mvn-light-sand);
+}
+
+.perf-ex-thumb-placeholder {
+  width: 52px;
+  height: 52px;
+  background: var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.perf-ex-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--mvn-dark);
+}
+
+.perf-ex-target {
+  font-size: 0.78rem;
+  color: var(--mvn-gray-600);
+  display: block;
+}
+
+.perf-use-prev-link {
+  background: none;
+  border: none;
+  color: var(--mvn-purple);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.perf-ex-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.perf-stepper-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.perf-stepper-group label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mvn-gray-600);
+  text-transform: uppercase;
+}
+
+.perf-stepper-box {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  overflow: hidden;
+  background: var(--mvn-white);
+}
+
+.perf-step-btn {
+  background: var(--mvn-light-sand);
+  border: none;
+  width: 32px;
+  height: 34px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--mvn-dark);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.perf-step-btn:hover {
+  background: var(--mvn-sand);
+}
+
+.perf-step-input {
+  width: 52px;
+  height: 34px;
+  border: none;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--mvn-dark);
+  outline: none;
+}
+
+.perf-note-input {
+  height: 34px;
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0 0.65rem;
+  font-size: 0.85rem;
+  width: 170px;
+  outline: none;
+}
+
+.perf-editor-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mvn-sand);
+}
+
+/* Highlighting target exercise */
+@keyframes pulseHighlight {
+  0% { box-shadow: 0 0 0 0 rgba(119, 0, 83, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(119, 0, 83, 0); border-color: var(--mvn-purple); }
+  100% { box-shadow: 0 0 0 0 rgba(119, 0, 83, 0); }
+}
+
+.highlight-pulse {
+  animation: pulseHighlight 1.5s ease-in-out;
+}
+
+/* Circuit Breakdown Inline Badges & Quick Log */
+.circuit-last-weight-chip {
+  background: linear-gradient(135deg, rgba(201, 242, 119, 0.4), rgba(76, 175, 80, 0.15));
+  border: 1px solid #8fc93a;
+  color: #1e4d0b;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: transform 0.15s;
+}
+
+.circuit-last-weight-chip:hover {
+  transform: scale(1.04);
+}
+
+.circuit-exercise-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.circuit-quick-log-btn {
+  background: transparent;
+  border: 1px solid var(--mvn-purple);
+  color: var(--mvn-purple);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.circuit-quick-log-btn:hover {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+}
+
+/* ==========================================================================
+   CIRCUIT RUNNER INTERACTIVE WEIGHT & REPS LOGGER
+   ========================================================================== */
+.runner-weight-reps-card {
+  background: var(--mvn-light-cream);
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.75rem 0.95rem;
+  margin-top: 0.85rem;
+}
+
+.runner-weight-reps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.runner-log-label {
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--mvn-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.runner-use-prev-btn {
+  background: var(--mvn-white);
+  border: 1px solid var(--mvn-gold);
+  color: #7d4f07;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.runner-use-prev-btn:hover {
+  background: var(--mvn-sand);
+}
+
+.runner-inputs-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.runner-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.runner-input-group label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mvn-gray-600);
+  text-transform: uppercase;
+}
+
+.runner-stepper-box {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  background: var(--mvn-white);
+  overflow: hidden;
+}
+
+.runner-stepper-btn {
+  background: var(--mvn-light-sand);
+  border: none;
+  width: 34px;
+  height: 34px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--mvn-dark);
+  cursor: pointer;
+}
+
+.runner-stepper-btn:hover {
+  background: var(--mvn-sand);
+}
+
+.runner-stepper-input {
+  width: 54px;
+  height: 34px;
+  border: none;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--mvn-dark);
+  outline: none;
+}
+
+.runner-note-row {
+  margin-top: 0.45rem;
+}
+
+.runner-ex-note-input {
+  width: 100%;
+  border: 1px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  outline: none;
+  background: var(--mvn-white);
+}
+
+/* Runner Cooldown Session Finish Box */
+.runner-finish-log-box {
+  background: var(--mvn-white);
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 1.1rem;
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.runner-finish-log-title {
+  color: var(--mvn-purple);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.65rem;
+}
+
+.runner-finish-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mvn-purple);
+  margin-bottom: 0.35rem;
+}
+
+.runner-feeling-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.runner-feeling-pill {
+  background: var(--mvn-light-sand);
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.runner-feeling-pill.active {
+  background: var(--mvn-purple);
+  color: var(--mvn-cream);
+  box-shadow: 0 2px 6px rgba(119, 0, 83, 0.25);
+}
+
+.runner-finish-textarea {
+  width: 100%;
+  border: 1px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0.55rem;
+  font-size: 0.88rem;
+  outline: none;
+  margin-bottom: 0.85rem;
+}
+
+.runner-recorded-recap {
+  border-top: 1px solid var(--mvn-light-sand);
+  padding-top: 0.65rem;
+}
+
+.runner-recap-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.runner-recap-chip {
+  background: var(--mvn-cream);
+  border: 1px solid var(--mvn-sand);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--mvn-dark);
+}
+
+/* ==========================================================================
+   DIARY WORKOUT PERFORMANCE LOGS & SUBTABS
+   ========================================================================== */
+.diary-subtabs-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid var(--mvn-light-sand);
+}
+
+.diary-subtab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--mvn-gray-600);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.diary-subtab-btn:hover {
+  color: var(--mvn-purple);
+}
+
+.diary-subtab-btn.active {
+  color: var(--mvn-purple);
+  border-bottom-color: var(--mvn-purple);
+}
+
+.perf-diary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.workout-logs-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.diary-workout-log-card {
+  background: var(--mvn-light-cream);
+  border: 1px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 1rem 1.15rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.diary-wlog-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.diary-wlog-title {
+  margin: 0.25rem 0 0.15rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--mvn-dark);
+}
+
+.diary-wlog-date {
+  font-size: 0.82rem;
+  color: var(--mvn-gray-600);
+  display: block;
+}
+
+.diary-wlog-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.diary-wlog-exercises {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--mvn-sand);
+  padding-top: 0.65rem;
+}
+
+.diary-wlog-exercises-heading {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--mvn-gray-600);
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.diary-wlog-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.diary-ex-pill {
+  background: var(--mvn-white);
+  border: 1px solid var(--mvn-sand);
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.diary-metric-tag.weight {
+  background: rgba(119, 0, 83, 0.08);
+  color: var(--mvn-purple);
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.diary-metric-tag.reps {
+  background: rgba(221, 167, 79, 0.18);
+  color: #7d4f07;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.diary-metric-tag.notes {
+  color: var(--mvn-gray-600);
+  font-style: italic;
+}
+
+

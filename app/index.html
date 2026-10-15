@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="assets/images/menovation-sq-purple-300.png">
   
   <!-- App Stylesheet -->
-  <link rel="stylesheet" href="css/app.css?v=13">
+  <link rel="stylesheet" href="css/app.css?v=14">
 </head>
 <body>
 
@@ -279,6 +279,35 @@
           </div>
         </div>
 
+        <!-- Performance Log & Notes Card -->
+        <div class="workout-performance-card" id="workoutPerformanceCard">
+          <div class="perf-card-header">
+            <div class="perf-header-left">
+              <span class="perf-header-icon">🏋️</span>
+              <div>
+                <h3 class="perf-header-title">Performance Log &amp; Notes</h3>
+                <p class="perf-header-sub">Record weights used, reps achieved, and personal reflections.</p>
+              </div>
+            </div>
+            <div class="perf-header-actions">
+              <button class="btn btn-sm btn-outline-purple" id="toggleLogEditorBtn">
+                ✏️ Record Weights &amp; Notes
+              </button>
+            </div>
+          </div>
+
+          <!-- Toast notification -->
+          <div id="perfSaveToast" class="perf-save-toast" style="display: none;"></div>
+
+          <!-- Dynamic display of latest log summary -->
+          <div id="perfSummaryBox" class="perf-summary-box"></div>
+
+          <!-- Collapsible interactive log editor -->
+          <div id="perfEditorBox" class="perf-editor-box" style="display: none;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
         <!-- Workout Circuits Breakdown -->
         <div class="circuits-breakdown-card">
           <h3>Workout Circuit Structure</h3>
@@ -440,12 +469,23 @@
     <section id="viewDiary" class="app-view" style="display: none;">
       <div class="view-header">
         <div>
-          <h2>Daily Symptom Tracker</h2>
-          <p class="view-subtitle">Private, local-first logging of daily well-being, sleep, and menopausal symptoms.</p>
+          <h2>Wellness &amp; Workout Diary</h2>
+          <p class="view-subtitle">Private, local-first logging of daily well-being, symptoms, and workout performance notes.</p>
         </div>
       </div>
 
-      <div class="grid-2">
+      <!-- Diary Subtabs -->
+      <div class="diary-subtabs-row" id="diarySubtabsRow">
+        <button class="diary-subtab-btn active" id="diaryTabSymptomsBtn" data-diary-tab="symptoms">
+          🧘 Daily Wellness &amp; Symptoms
+        </button>
+        <button class="diary-subtab-btn" id="diaryTabWorkoutsBtn" data-diary-tab="workouts">
+          🏋️ Workout Performance &amp; Notes Log
+        </button>
+      </div>
+
+      <!-- Tab 1: Symptoms Tracker -->
+      <div id="diarySymptomsSection" class="grid-2">
         <!-- Log Form Card -->
         <div class="card">
           <h3 class="card-title">Log Today's Wellness</h3>
@@ -499,6 +539,22 @@
         <div class="card">
           <h3 class="card-title">Recent Diary Entries</h3>
           <div id="diaryHistoryContainer" class="diary-history-list"></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Workout Performance Logs -->
+      <div id="diaryWorkoutsSection" class="diary-workouts-section" style="display: none;">
+        <div class="card">
+          <div class="perf-diary-header">
+            <div>
+              <h3 class="card-title">Your Workout Performance History</h3>
+              <p class="form-subtext">Recordings of weights lifted, reps performed, and notes logged across your workouts.</p>
+            </div>
+            <div id="diaryWorkoutLogsStatsBadge" class="badge badge-sand">0 Recorded Sessions</div>
+          </div>
+          <div id="diaryWorkoutLogsContainer" class="workout-logs-history-list">
+            <!-- Populated dynamically -->
+          </div>
         </div>
       </div>
     </section>
@@ -610,9 +666,9 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="js/db.js?v=13"></script>
-  <script src="js/app.js?v=13"></script>
-  <script src="js/tv.js?v=13"></script>
+  <script src="js/db.js?v=14"></script>
+  <script src="js/app.js?v=14"></script>
+  <script src="js/tv.js?v=14"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

@@ -177,11 +177,30 @@ assert(indexHtml.includes('id="circuitRunnerOverlay"'), 'index.html has circuitR
 assert(indexHtml.includes('id="runnerAutoAdvanceToggle"'), 'index.html has runnerAutoAdvanceToggle');
 assert(indexHtml.includes('id="circuitRunnerStage"'), 'index.html has circuitRunnerStage for swipeable cards');
 assert(indexHtml.includes('id="playerControlsBar"'), 'index.html has playerControlsBar id');
-assert(indexHtml.includes('css/app.css?v=13'), 'index.html includes css with v=13 cache busting');
-assert(indexHtml.includes('js/app.js?v=13'), 'index.html includes app.js with v=13 cache busting');
+assert(indexHtml.includes('id="workoutPerformanceCard"'), 'index.html has workoutPerformanceCard');
+assert(indexHtml.includes('id="toggleLogEditorBtn"'), 'index.html has toggleLogEditorBtn');
+assert(indexHtml.includes('id="perfSummaryBox"'), 'index.html has perfSummaryBox');
+assert(indexHtml.includes('id="perfEditorBox"'), 'index.html has perfEditorBox');
+assert(indexHtml.includes('id="diarySubtabsRow"'), 'index.html has diarySubtabsRow for wellness vs workout logs');
+assert(indexHtml.includes('id="diaryWorkoutLogsContainer"'), 'index.html has diaryWorkoutLogsContainer');
+assert(indexHtml.includes('css/app.css?v=14'), 'index.html includes css with v=14 cache busting');
+assert(indexHtml.includes('js/app.js?v=14'), 'index.html includes app.js with v=14 cache busting');
+
+const dbJs = fs.readFileSync(path.join(APP_DIR, 'js', 'db.js'), 'utf-8');
+assert(dbJs.includes('const DB_VERSION = 3;'), 'db.js upgraded to DB_VERSION 3');
+assert(dbJs.includes('getWorkoutLogs'), 'db.js implements getWorkoutLogs');
+assert(dbJs.includes('getLatestWorkoutLog'), 'db.js implements getLatestWorkoutLog');
+assert(dbJs.includes('saveWorkoutLog'), 'db.js implements saveWorkoutLog');
+
+assert(appJs.includes('renderWorkoutPerformanceUI'), 'app.js implements renderWorkoutPerformanceUI');
+assert(appJs.includes('runner-weight-reps-card'), 'app.js embeds weight & reps stepper in Circuit Runner');
+assert(appJs.includes('runner-finish-log-box'), 'app.js embeds reflections & session notes in Circuit Cooldown finish');
+assert(appJs.includes('circuit-last-weight-chip'), 'app.js displays last logged weight/reps on circuit overview cards');
+assert(appJs.includes('circuit-quick-log-btn'), 'app.js displays quick log button on circuit overview cards');
+assert(appJs.includes('loadWorkoutLogsHistory'), 'app.js implements loadWorkoutLogsHistory in Diary');
 
 const swJs = fs.readFileSync(path.join(APP_DIR, 'sw.js'), 'utf-8');
-assert(swJs.includes("const CACHE_NAME = 'menovation-offline-v13';"), 'sw.js uses CACHE_NAME v13 for clean cache eviction');
+assert(swJs.includes("const CACHE_NAME = 'menovation-offline-v14';"), 'sw.js uses CACHE_NAME v14 for clean cache eviction');
 
 assert(appCss.includes('.workout-action-group'), 'app.css styles .workout-action-group');
 assert(appCss.includes('.workout-preview-btn'), 'app.css styles .workout-preview-btn');
@@ -200,6 +219,12 @@ assert(appCss.includes('.circuit-runner-stage'), 'app.css styles circuit-runner-
 assert(appCss.includes('.runner-card'), 'app.css styles runner-card');
 assert(appCss.includes('.runner-timer-box'), 'app.css styles runner-timer-box');
 assert(appCss.includes('.btn-circuit-mode'), 'app.css styles btn-circuit-mode');
+assert(appCss.includes('.workout-performance-card'), 'app.css styles workout-performance-card');
+assert(appCss.includes('.perf-summary-card'), 'app.css styles perf-summary-card');
+assert(appCss.includes('.perf-editor-card'), 'app.css styles perf-editor-card');
+assert(appCss.includes('.runner-weight-reps-card'), 'app.css styles runner-weight-reps-card');
+assert(appCss.includes('.runner-finish-log-box'), 'app.css styles runner-finish-log-box');
+assert(appCss.includes('.diary-workout-log-card'), 'app.css styles diary-workout-log-card');
 
 console.log('\n====================================================');
 console.log(`TOTAL: ${passed} PASSED, ${failed} FAILED`);
