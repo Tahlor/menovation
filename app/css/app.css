@@ -2147,6 +2147,19 @@ input[type="range"] {
   margin: 0;
 }
 
+#topVideoAnchor:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cooldown-video-mount {
+  margin-top: 1rem;
+  border-radius: var(--mvn-radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
 /* Interactive Circuit Exercise Set Check Button */
 .circuit-exercise-check-btn {
   background: var(--mvn-white);
@@ -2512,3 +2525,427 @@ input[type="range"] {
 .tv-mode .app-footer { display: none; }
 .tv-mode .nav-tab, .tv-mode .filter-pill, .tv-mode .btn { font-size: 1.1rem; padding-top: .7rem; padding-bottom: .7rem; }
 .tv-mode body, .tv-mode { cursor: none; }
+
+/* ========================================================================== */
+/* INTERACTIVE CIRCUIT MODE RUNNER                                            */
+/* ========================================================================== */
+
+.circuit-runner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background-color: var(--mvn-cream);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.circuit-runner-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--mvn-white);
+  border-bottom: 1.5px solid var(--mvn-light-sand);
+  box-shadow: var(--mvn-shadow-sm);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.circuit-runner-top-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.circuit-runner-exit-btn {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.circuit-runner-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.circuit-runner-workout-name {
+  color: var(--mvn-purple);
+}
+
+.circuit-runner-sep {
+  color: var(--mvn-sand);
+}
+
+.circuit-runner-part-name {
+  color: var(--mvn-dark);
+}
+
+.circuit-runner-top-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.circuit-runner-step-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mvn-gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.circuit-runner-progress-track {
+  width: 180px;
+  height: 6px;
+  background-color: rgba(200, 183, 179, 0.4);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.circuit-runner-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--mvn-purple), var(--mvn-neon));
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 999px;
+}
+
+.circuit-runner-top-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.circuit-runner-toggle-pill {
+  background-color: var(--mvn-light-cream);
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--mvn-dark);
+  transition: all 0.2s ease;
+}
+
+.circuit-runner-toggle-pill.active {
+  background-color: var(--mvn-purple);
+  color: var(--mvn-cream);
+  border-color: var(--mvn-purple);
+}
+
+.circuit-runner-sound-btn {
+  background: var(--mvn-white);
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.circuit-runner-sound-btn.active {
+  background: var(--mvn-neon);
+  border-color: var(--mvn-neon);
+}
+
+/* Runner Stage & Cards */
+.circuit-runner-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.runner-card {
+  max-width: 860px;
+  width: 100%;
+  background-color: var(--mvn-white);
+  border: 1.5px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-lg);
+  box-shadow: var(--mvn-shadow-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: runnerCardFade 0.22s ease-out;
+}
+
+@keyframes runnerCardFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.runner-exercise-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .runner-exercise-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .runner-card {
+    padding: 1.25rem;
+  }
+}
+
+.runner-gif-frame {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--mvn-radius-md);
+  overflow: hidden;
+  background-color: #161219;
+  box-shadow: var(--mvn-shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.runner-gif-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.runner-details-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.runner-circuit-tag {
+  color: var(--mvn-purple);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.runner-exercise-title {
+  font-size: 1.6rem;
+  font-family: var(--mvn-font-serif);
+  color: var(--mvn-dark);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.runner-prescription-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.runner-rep-badge {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--mvn-purple);
+  background-color: var(--mvn-light-cream);
+  border: 2px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.4rem 1rem;
+  letter-spacing: 0.04em;
+}
+
+/* Circular & Bar Countdown Timer */
+.runner-timer-box {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: #faf6f8;
+  border: 1.5px solid var(--mvn-light-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.75rem 1.25rem;
+}
+
+.runner-timer-number {
+  font-size: 2.4rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--mvn-purple);
+  line-height: 1;
+  min-width: 80px;
+}
+
+.runner-timer-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.runner-timer-btn {
+  background: var(--mvn-white);
+  border: 1px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-sm);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.runner-timer-btn:hover {
+  background: var(--mvn-light-cream);
+  border-color: var(--mvn-purple);
+}
+
+/* Center Stage Cards: Rest, Prepare & Cooldown */
+.runner-rest-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.runner-rest-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.runner-rest-title {
+  font-size: 1.7rem;
+  font-family: var(--mvn-font-serif);
+  color: var(--mvn-dark);
+  margin: 0;
+}
+
+.runner-rest-countdown {
+  font-size: 4rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--mvn-purple);
+  line-height: 1;
+}
+
+.runner-up-next-box {
+  background-color: var(--mvn-light-cream);
+  border: 1.5px solid var(--mvn-sand);
+  border-radius: var(--mvn-radius-md);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: left;
+}
+
+.runner-up-next-thumb {
+  width: 60px;
+  height: 48px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #000;
+}
+
+.runner-up-next-info h5 {
+  font-size: 0.75rem;
+  color: var(--mvn-gray-600);
+  text-transform: uppercase;
+  margin: 0 0 0.15rem 0;
+}
+
+.runner-up-next-info div {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--mvn-dark);
+}
+
+/* Prepare Card */
+.runner-prepare-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.runner-prepare-countdown {
+  font-size: 4.5rem;
+  font-weight: 900;
+  color: var(--mvn-purple);
+  line-height: 1;
+  animation: pulsePrepare 1s infinite alternate;
+}
+
+@keyframes pulsePrepare {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+/* Cooldown Card */
+.runner-cooldown-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.runner-cooldown-celebrate {
+  background: linear-gradient(135deg, rgba(119, 0, 83, 0.08), rgba(201, 242, 119, 0.2));
+  border-radius: var(--mvn-radius-md);
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+.runner-cooldown-celebrate h3 {
+  color: var(--mvn-purple);
+  font-size: 1.35rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Runner Bottom Footer Bar */
+.circuit-runner-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: var(--mvn-white);
+  border-top: 1.5px solid var(--mvn-light-sand);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  gap: 1rem;
+}
+
+.circuit-runner-nav-btn {
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+}
+
+.circuit-runner-footer-center {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-circuit-mode {
+  background: linear-gradient(135deg, var(--mvn-purple), #9e1471);
+  color: var(--mvn-cream);
+  font-weight: 800;
+  border: none;
+  box-shadow: 0 4px 12px rgba(119, 0, 83, 0.25);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-circuit-mode:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(119, 0, 83, 0.35);
+}
+

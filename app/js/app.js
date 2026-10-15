@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Video Player Elements
   const videoPlayer = document.getElementById('workoutVideoPlayer');
   const videoWrapper = document.getElementById('workoutVideoWrapper');
+  const workoutVideoWrapper = videoWrapper;
+  const playerControlsBar = document.getElementById('playerControlsBar') || document.querySelector('.player-controls-bar');
   const videoSourceInfo = document.getElementById('videoSourceInfo');
   const videoCurrentSourceBadge = document.getElementById('videoCurrentSourceBadge');
   const changeSourceQuickBtn = document.getElementById('changeSourceQuickBtn');
@@ -968,8 +970,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="banner-icon">⚡</div>
             <div class="banner-content">
               <strong>Structured Circuit Workout &bull; Guided Cooldown Video Flow</strong>
-              <p>Perform the targeted exercises, sets, reps, and timed intervals listed in the interactive circuits below. Your guided cooldown flow video is ready at the bottom to conclude your session.</p>
+              <p>Perform the targeted exercises, sets, reps, and timed intervals listed below. Your guided cooldown flow video is embedded at Part 7 to conclude your session.</p>
               <div class="circuit-format-banner-actions">
+                <button class="btn btn-sm btn-primary" id="bannerStartRunnerBtn">
+                  ⚡ Start Interactive Circuit Mode &rarr;
+                </button>
                 <button class="btn btn-sm btn-purple" id="bannerJumpCooldownBtn">
                   🧘 Jump to Cooldown Video &darr;
                 </button>
@@ -980,10 +985,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           </div>
         `;
+        const startRunnerBannerBtn = formatNotice.querySelector('#bannerStartRunnerBtn');
+        if (startRunnerBannerBtn) {
+          startRunnerBannerBtn.addEventListener('click', () => {
+            openCircuitRunner(currentWorkout);
+          });
+        }
         const jumpBtn = formatNotice.querySelector('#bannerJumpCooldownBtn');
         if (jumpBtn) {
           jumpBtn.addEventListener('click', () => {
-            const target = document.getElementById('cooldownSection') || videoWrapper;
+            const target = document.getElementById('cooldownSection') || document.getElementById('cooldownVideoAnchor') || videoWrapper;
             if (target) {
               target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
@@ -1025,6 +1036,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       equipChips.innerHTML = '<span class="equipment-chip">No special equipment required</span>';
     }
 
+    // Anchor Video Player depending on workout type
+    const topAnchor = document.getElementById('topVideoAnchor');
+    const startRunnerHeaderBtn = document.getElementById('startCircuitRunnerBtn');
+
+    // Safely park video player and controls back to topAnchor if currently docked in circuits
+    if (topAnchor && videoWrapper && videoWrapper.parentElement !== topAnchor) {
+      topAnchor.appendChild(videoWrapper);
+      if (playerControlsBar) topAnchor.appendChild(playerControlsBar);
+    }
+
     // Parse and render circuits
     circuitsContainer.innerHTML = '';
     if (currentWorkout.circuits && currentWorkout.circuits.length > 0) {
@@ -1033,6 +1054,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderCircuitBreakdown(currentWorkout.circuitsCopy, circuitsContainer);
     } else {
       circuitsContainer.innerHTML = '<p style="color:var(--mvn-gray-600); font-style:italic;">Follow along directly with the full-length video coach.</p>';
+    }
+
+    const cooldownAnchor = document.getElementById('cooldownVideoAnchor');
+
+    if (isCooldown) {
+      if (startRunnerHeaderBtn) {
+        startRunnerHeaderBtn.style.display = 'inline-flex';
+        startRunnerHeaderBtn.onclick = () => openCircuitRunner(currentWorkout);
+      }
+      if (cooldownAnchor && videoWrapper) {
+        cooldownAnchor.appendChild(videoWrapper);
+        if (playerControlsBar) cooldownAnchor.appendChild(playerControlsBar);
+        videoWrapper.style.display = 'block';
+        if (playerControlsBar) playerControlsBar.style.display = 'flex';
+      }
+    } else {
+      if (startRunnerHeaderBtn) startRunnerHeaderBtn.style.display = 'none';
+      if (topAnchor && videoWrapper) {
+        topAnchor.appendChild(videoWrapper);
+        if (playerControlsBar) topAnchor.appendChild(playerControlsBar);
+        videoWrapper.style.display = 'block';
+        if (playerControlsBar) playerControlsBar.style.display = 'flex';
+      }
     }
 
     // Completion state
@@ -1458,6 +1502,564 @@ document.addEventListener('DOMContentLoaded', async () => {
     return bestEx;
   }
 
+  // =========================================================================
+  // INTERACTIVE CIRCUIT MODE RUNNER (TIMER, SWIPE & AUTO-ADVANCE)
+  // =========================================================================
+
+  const runnerOverlay = document.getElementById('circuitRunnerOverlay');
+  const runnerExitBtn = document.getElementById('circuitRunnerExitBtn');
+  const runnerWorkoutName = document.getElementById('runnerWorkoutName');
+  const runnerPartName = document.getElementById('runnerPartName');
+  const runnerStepCounter = document.getElementById('runnerStepCounter');
+  const runnerProgressBar = document.getElementById('runnerProgressBar');
+  const runnerAutoAdvanceToggle = document.getElementById('runnerAutoAdvanceToggle');
+  const runnerAutoAdvanceState = document.getElementById('runnerAutoAdvanceState');
+  const runnerSoundToggleBtn = document.getElementById('runnerSoundToggleBtn');
+  const runnerStage = document.getElementById('circuitRunnerStage');
+  const runnerPrevBtn = document.getElementById('runnerPrevBtn');
+  const runnerNextBtn = document.getElementById('runnerNextBtn');
+  const runnerFooterCenter = document.getElementById('runnerFooterCenter');
+
+  let runnerSteps = [];
+  let runnerCurrentIndex = 0;
+  let runnerTimerId = null;
+  let runnerSecondsLeft = 0;
+  let runnerIsPaused = false;
+  let runnerAutoAdvance = localStorage.getItem('mvn_circuit_autoadvance') !== 'false';
+  let runnerSoundEnabled = localStorage.getItem('mvn_circuit_sound') !== 'false';
+
+  // Web Audio Synthesizer for offline countdown chimes
+  const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+  let runnerAudioCtx = null;
+
+  function playRunnerChime(freq = 440, duration = 0.12, type = 'sine') {
+    if (!runnerSoundEnabled) return;
+    try {
+      if (!runnerAudioCtx) runnerAudioCtx = new AudioCtxClass();
+      if (runnerAudioCtx.state === 'suspended') runnerAudioCtx.resume();
+      const osc = runnerAudioCtx.createOscillator();
+      const gain = runnerAudioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, runnerAudioCtx.currentTime);
+      gain.gain.setValueAtTime(0.25, runnerAudioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, runnerAudioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(runnerAudioCtx.destination);
+      osc.start();
+      osc.stop(runnerAudioCtx.currentTime + duration);
+    } catch (e) {}
+  }
+
+  function updateAutoAdvanceUI() {
+    if (!runnerAutoAdvanceToggle || !runnerAutoAdvanceState) return;
+    if (runnerAutoAdvance) {
+      runnerAutoAdvanceToggle.classList.add('active');
+      runnerAutoAdvanceState.textContent = 'ON';
+    } else {
+      runnerAutoAdvanceToggle.classList.remove('active');
+      runnerAutoAdvanceState.textContent = 'OFF';
+    }
+  }
+
+  function updateSoundUI() {
+    if (!runnerSoundToggleBtn) return;
+    if (runnerSoundEnabled) {
+      runnerSoundToggleBtn.classList.add('active');
+      runnerSoundToggleBtn.textContent = '🔔';
+    } else {
+      runnerSoundToggleBtn.classList.remove('active');
+      runnerSoundToggleBtn.textContent = '🔕';
+    }
+  }
+
+  if (runnerAutoAdvanceToggle) {
+    updateAutoAdvanceUI();
+    runnerAutoAdvanceToggle.addEventListener('click', () => {
+      runnerAutoAdvance = !runnerAutoAdvance;
+      localStorage.setItem('mvn_circuit_autoadvance', String(runnerAutoAdvance));
+      updateAutoAdvanceUI();
+      const step = runnerSteps[runnerCurrentIndex];
+      if (step && (step.type === 'rest' || step.type === 'prepare' || (step.type === 'exercise' && step.duration))) {
+        if (!runnerTimerId && runnerSecondsLeft > 0) {
+          startStepTimer();
+        }
+      }
+    });
+  }
+
+  if (runnerSoundToggleBtn) {
+    updateSoundUI();
+    runnerSoundToggleBtn.addEventListener('click', () => {
+      runnerSoundEnabled = !runnerSoundEnabled;
+      localStorage.setItem('mvn_circuit_sound', String(runnerSoundEnabled));
+      updateSoundUI();
+      if (runnerSoundEnabled) playRunnerChime(660, 0.1);
+    });
+  }
+
+  function buildRunnerSteps(workout) {
+    const steps = [];
+    const circuits = workout.circuits || [];
+
+    circuits.forEach((c) => {
+      const isCooldown = c.isCooldown;
+      if (isCooldown) {
+        steps.push({
+          type: 'cooldown',
+          circuitIndex: c.circuitIndex || 7,
+          circuitTitle: c.title || 'Guided Cooldown Flow',
+          cooldownPoses: c.cooldownPoses || [],
+          coachingTip: c.coachingTip || '',
+          duration: null
+        });
+        return;
+      }
+
+      const rounds = c.rounds || 1;
+      for (let r = 1; r <= rounds; r++) {
+        (c.items || []).forEach((item) => {
+          steps.push({
+            type: item.type, // 'prepare', 'exercise', 'rest'
+            circuitIndex: c.circuitIndex,
+            circuitTitle: c.title,
+            round: r,
+            totalRounds: rounds,
+            coachingTip: c.coachingTip || '',
+            title: item.title,
+            exercisePostId: item.exercisePostId,
+            repQuantity: item.repQuantity,
+            repUnit: item.repUnit,
+            duration: item.duration || (item.type === 'prepare' ? 5 : null)
+          });
+        });
+      }
+    });
+
+    return steps;
+  }
+
+  function openCircuitRunner(workout) {
+    if (!workout) return;
+    runnerSteps = buildRunnerSteps(workout);
+    if (runnerSteps.length === 0) {
+      alert('No structured circuit steps found for this workout.');
+      return;
+    }
+
+    runnerCurrentIndex = 0;
+    if (runnerOverlay) {
+      runnerOverlay.style.display = 'flex';
+    }
+    document.body.style.overflow = 'hidden';
+
+    renderRunnerStep(0);
+  }
+
+  function exitCircuitRunner() {
+    if (runnerTimerId) {
+      clearInterval(runnerTimerId);
+      runnerTimerId = null;
+    }
+    if (runnerOverlay) {
+      runnerOverlay.style.display = 'none';
+    }
+    document.body.style.overflow = '';
+
+    // Restore video player back to overview anchor
+    const cooldownAnchor = document.getElementById('cooldownVideoAnchor');
+    const topAnchor = document.getElementById('topVideoAnchor');
+    const isCooldown = currentWorkout && currentWorkout.videoType === 'cooldown';
+
+    if (isCooldown && cooldownAnchor && videoWrapper && playerControlsBar) {
+      cooldownAnchor.appendChild(videoWrapper);
+      cooldownAnchor.appendChild(playerControlsBar);
+      videoWrapper.style.display = 'block';
+      playerControlsBar.style.display = 'flex';
+    } else if (topAnchor && videoWrapper && playerControlsBar) {
+      topAnchor.appendChild(videoWrapper);
+      topAnchor.appendChild(playerControlsBar);
+      videoWrapper.style.display = 'block';
+      playerControlsBar.style.display = 'flex';
+    }
+  }
+
+  if (runnerExitBtn) {
+    runnerExitBtn.addEventListener('click', exitCircuitRunner);
+  }
+
+  function updateCountdownDisplay() {
+    const numEl = document.getElementById('runnerCountdownNum');
+    if (numEl) {
+      const step = runnerSteps[runnerCurrentIndex];
+      numEl.textContent = step && step.type === 'prepare' ? `${runnerSecondsLeft}` : `${runnerSecondsLeft}s`;
+    }
+  }
+
+  function toggleTimerPause(btn) {
+    runnerIsPaused = !runnerIsPaused;
+    if (btn) {
+      btn.textContent = runnerIsPaused ? 'Resume ▶' : 'Pause ⏸';
+    }
+  }
+
+  function startStepTimer() {
+    if (runnerTimerId) clearInterval(runnerTimerId);
+    runnerIsPaused = false;
+    updateCountdownDisplay();
+
+    runnerTimerId = setInterval(() => {
+      if (runnerIsPaused) return;
+
+      runnerSecondsLeft--;
+      updateCountdownDisplay();
+
+      // Countdown audio cues at 3, 2, 1, and 0
+      if (runnerSecondsLeft <= 3 && runnerSecondsLeft > 0) {
+        playRunnerChime(440, 0.08);
+      } else if (runnerSecondsLeft === 0) {
+        playRunnerChime(880, 0.28);
+      }
+
+      if (runnerSecondsLeft <= 0) {
+        clearInterval(runnerTimerId);
+        runnerTimerId = null;
+
+        if (runnerAutoAdvance) {
+          goToNextRunnerStep();
+        }
+      }
+    }, 1000);
+  }
+
+  function goToNextRunnerStep() {
+    if (runnerCurrentIndex < runnerSteps.length - 1) {
+      renderRunnerStep(runnerCurrentIndex + 1);
+    } else {
+      exitCircuitRunner();
+    }
+  }
+
+  function goToPrevRunnerStep() {
+    if (runnerCurrentIndex > 0) {
+      renderRunnerStep(runnerCurrentIndex - 1);
+    }
+  }
+
+  if (runnerNextBtn) runnerNextBtn.onclick = goToNextRunnerStep;
+  if (runnerPrevBtn) runnerPrevBtn.onclick = goToPrevRunnerStep;
+
+  function renderPrepareStep(step) {
+    const nextStep = runnerSteps[runnerCurrentIndex + 1];
+    let matchedNextEx = null;
+    if (nextStep && nextStep.exercisePostId) {
+      matchedNextEx = exercisesData && exercisesData[String(nextStep.exercisePostId)];
+    }
+    if (!matchedNextEx && nextStep && nextStep.title) {
+      matchedNextEx = findExerciseByName(nextStep.title);
+    }
+    const nextGifUrl = matchedNextEx ? getGifUrl(matchedNextEx.gifUrl) : '';
+
+    runnerSecondsLeft = step.duration || 5;
+
+    const card = document.createElement('div');
+    card.className = 'runner-card runner-prepare-card';
+    card.innerHTML = `
+      <div style="font-size:0.95rem; font-weight:800; color:var(--mvn-purple); text-transform:uppercase; letter-spacing:0.06em;">
+        ⚡ Get Ready
+      </div>
+      <div class="runner-prepare-countdown" id="runnerCountdownNum">${runnerSecondsLeft}</div>
+      <div style="font-size:1.15rem; font-weight:700; color:var(--mvn-dark);">
+        Next Up: ${cleanText(nextStep ? nextStep.title : 'First Exercise')}
+      </div>
+      ${nextGifUrl ? `
+        <div class="runner-up-next-box" style="margin-top:0.5rem;">
+          <img src="${nextGifUrl}" alt="Preview" class="runner-up-next-thumb">
+          <div class="runner-up-next-info">
+            <h5>Form Preview</h5>
+            <div>${cleanText(nextStep.title)} &bull; ${nextStep.repQuantity ? `${nextStep.repQuantity} ${nextStep.repUnit || 'Reps'}` : `${nextStep.duration || 30}s`}</div>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    runnerStage.appendChild(card);
+
+    runnerFooterCenter.innerHTML = `
+      <button class="btn btn-primary" id="skipPrepareBtn">Skip &amp; Start Move &rarr;</button>
+    `;
+    const skipBtn = runnerFooterCenter.querySelector('#skipPrepareBtn');
+    if (skipBtn) skipBtn.onclick = () => goToNextRunnerStep();
+
+    startStepTimer();
+  }
+
+  function renderRestStep(step) {
+    const nextStep = runnerSteps[runnerCurrentIndex + 1];
+    let matchedNextEx = null;
+    if (nextStep && nextStep.exercisePostId) {
+      matchedNextEx = exercisesData && exercisesData[String(nextStep.exercisePostId)];
+    }
+    if (!matchedNextEx && nextStep && nextStep.title) {
+      matchedNextEx = findExerciseByName(nextStep.title);
+    }
+    const nextGifUrl = matchedNextEx ? getGifUrl(matchedNextEx.gifUrl) : '';
+
+    runnerSecondsLeft = step.duration || 30;
+
+    const card = document.createElement('div');
+    card.className = 'runner-card runner-rest-card';
+    card.innerHTML = `
+      <div class="runner-rest-icon">☕</div>
+      <h3 class="runner-rest-title">Rest &amp; Recovery</h3>
+      <div class="runner-rest-countdown" id="runnerCountdownNum">${runnerSecondsLeft}s</div>
+      <p style="color:var(--mvn-gray-600); font-size:0.95rem; margin:0;">Catch your breath, shake out muscles, and prepare for the next set.</p>
+      ${nextStep ? `
+        <div class="runner-up-next-box">
+          ${nextGifUrl ? `<img src="${nextGifUrl}" alt="Upcoming" class="runner-up-next-thumb">` : '<div style="font-size:1.8rem;">💪</div>'}
+          <div class="runner-up-next-info">
+            <h5>Up Next</h5>
+            <div>${cleanText(nextStep.title || 'Next Exercise')} &bull; ${nextStep.repQuantity ? `${nextStep.repQuantity} ${nextStep.repUnit || 'Reps'}` : `${nextStep.duration || 30}s`}</div>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    runnerStage.appendChild(card);
+
+    runnerFooterCenter.innerHTML = `
+      <button class="btn btn-primary btn-lg" id="skipRestBtn">Skip Rest &amp; Start Move &rarr;</button>
+    `;
+    const skipBtn = runnerFooterCenter.querySelector('#skipRestBtn');
+    if (skipBtn) skipBtn.onclick = () => goToNextRunnerStep();
+
+    startStepTimer();
+  }
+
+  function renderExerciseStep(step) {
+    let matchedEx = null;
+    if (step.exercisePostId && exercisesData) {
+      matchedEx = exercisesData[String(step.exercisePostId)];
+    }
+    if (!matchedEx) {
+      matchedEx = findExerciseByName(step.title);
+    }
+
+    const gifUrl = matchedEx ? getGifUrl(matchedEx.gifUrl) : '';
+    const isTimed = Boolean(step.duration);
+    runnerSecondsLeft = step.duration || 0;
+
+    const card = document.createElement('div');
+    card.className = 'runner-card';
+
+    card.innerHTML = `
+      <div class="runner-exercise-layout">
+        <div class="runner-gif-frame" title="Click for form details">
+          ${gifUrl ? `
+            <img src="${gifUrl}" alt="${step.title}" class="runner-gif-img" onerror="this.src='assets/images/menovation-sq-purple-300.png';">
+          ` : '<div style="font-size:3.5rem;">💪</div>'}
+        </div>
+        <div class="runner-details-column">
+          <div class="runner-circuit-tag">Part ${step.circuitIndex}: ${cleanText(step.circuitTitle)}${step.totalRounds > 1 ? ` • Round ${step.round} of ${step.totalRounds}` : ''}</div>
+          <h2 class="runner-exercise-title">${cleanText(step.title || (matchedEx ? matchedEx.exerciseTitle : 'Exercise'))}</h2>
+          
+          <div class="runner-prescription-row">
+            ${step.repQuantity ? `
+              <div class="runner-rep-badge">${step.repQuantity} ${step.repUnit || 'REPS'}</div>
+            ` : ''}
+            ${isTimed ? `
+              <div class="runner-timer-box">
+                <div class="runner-timer-number" id="runnerCountdownNum">${runnerSecondsLeft}s</div>
+                <div class="runner-timer-actions">
+                  <button class="runner-timer-btn" id="runnerTimerAddBtn">+10s</button>
+                  <button class="runner-timer-btn" id="runnerTimerSubtractBtn">-10s</button>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="circuit-exercise-meta">
+            ${matchedEx && matchedEx.usesWeights ? '<span class="badge badge-purple">Weights</span>' : ''}
+            ${matchedEx && matchedEx.usesBands ? '<span class="badge badge-sand">Bands</span>' : ''}
+            ${matchedEx && !matchedEx.usesWeights && !matchedEx.usesBands ? '<span class="badge badge-sand">Bodyweight</span>' : ''}
+          </div>
+
+          ${step.coachingTip ? `
+            <div class="circuit-coaching-tip" style="margin-top:0.5rem;">
+              <span class="tip-icon">💬</span>
+              <div class="tip-body">
+                <strong>Coach's Guidance:</strong>
+                <p>${cleanText(step.coachingTip)}</p>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    runnerStage.appendChild(card);
+
+    if (isTimed) {
+      runnerFooterCenter.innerHTML = `
+        <button class="btn btn-secondary" id="runnerTimerPauseBtn">Pause ⏸</button>
+      `;
+      const pauseBtn = runnerFooterCenter.querySelector('#runnerTimerPauseBtn');
+      if (pauseBtn) {
+        pauseBtn.onclick = () => toggleTimerPause(pauseBtn);
+      }
+
+      const addBtn = card.querySelector('#runnerTimerAddBtn');
+      if (addBtn) {
+        addBtn.onclick = () => {
+          runnerSecondsLeft += 10;
+          updateCountdownDisplay();
+        };
+      }
+      const subBtn = card.querySelector('#runnerTimerSubtractBtn');
+      if (subBtn) {
+        subBtn.onclick = () => {
+          runnerSecondsLeft = Math.max(1, runnerSecondsLeft - 10);
+          updateCountdownDisplay();
+        };
+      }
+
+      startStepTimer();
+    } else {
+      // Reps: Big complete button in center
+      runnerFooterCenter.innerHTML = `
+        <button class="btn btn-primary btn-lg" id="runnerDoneRepBtn">✓ Completed ${step.repQuantity} ${step.repUnit || 'Reps'} &rarr;</button>
+      `;
+      const doneBtn = runnerFooterCenter.querySelector('#runnerDoneRepBtn');
+      if (doneBtn) doneBtn.onclick = () => goToNextRunnerStep();
+    }
+  }
+
+  function renderCooldownStep(step) {
+    const card = document.createElement('div');
+    card.className = 'runner-card runner-cooldown-card';
+    card.innerHTML = `
+      <div class="runner-cooldown-celebrate">
+        <h3>🎉 Circuits Completed! Amazing Work!</h3>
+        <p style="margin:0; color:var(--mvn-dark); font-size:0.95rem;">Follow along below with the coach's guided cooldown flow to stretch, recover, and conclude your workout.</p>
+      </div>
+
+      ${step.cooldownPoses && step.cooldownPoses.length > 0 ? `
+        <div class="cooldown-poses-card">
+          <div class="cooldown-poses-title">🧘 Guided Flow Sequence:</div>
+          <div class="cooldown-poses-list">
+            ${step.cooldownPoses.map(p => `<span class="cooldown-pose-chip">${cleanText(p)}</span>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Mount point for video player inside cooldown runner card -->
+      <div id="runnerVideoAnchor"></div>
+    `;
+    runnerStage.appendChild(card);
+
+    const runnerAnchor = card.querySelector('#runnerVideoAnchor');
+    if (runnerAnchor && videoWrapper && playerControlsBar) {
+      runnerAnchor.appendChild(videoWrapper);
+      runnerAnchor.appendChild(playerControlsBar);
+      videoWrapper.style.display = 'block';
+      playerControlsBar.style.display = 'flex';
+      videoPlayer.play().catch(() => {});
+    }
+
+    runnerFooterCenter.innerHTML = `
+      <button class="btn btn-success btn-lg" id="runnerFinishBtn">✓ Finish &amp; Mark Complete</button>
+    `;
+    const finishBtn = runnerFooterCenter.querySelector('#runnerFinishBtn');
+    if (finishBtn) {
+      finishBtn.onclick = async () => {
+        if (currentWorkout) {
+          const wid = String(currentWorkout.workoutPostId);
+          await window.mvnDB.put('completed_workouts', {
+            workoutId: wid,
+            title: currentWorkout.title,
+            programId: currentWorkout.programPostId,
+            completedAt: new Date().toISOString()
+          });
+          updateCompletionButtonUI(true);
+        }
+        exitCircuitRunner();
+      };
+    }
+  }
+
+  function renderRunnerStep(index) {
+    if (runnerTimerId) {
+      clearInterval(runnerTimerId);
+      runnerTimerId = null;
+    }
+    runnerIsPaused = false;
+    runnerCurrentIndex = Math.max(0, Math.min(index, runnerSteps.length - 1));
+    const step = runnerSteps[runnerCurrentIndex];
+    if (!step) return;
+
+    // 1. Update Header UI
+    runnerWorkoutName.textContent = cleanText(currentWorkout.title);
+    runnerPartName.textContent = `Part ${step.circuitIndex}: ${cleanText(step.circuitTitle)}${step.totalRounds > 1 ? ` (Round ${step.round}/${step.totalRounds})` : ''}`;
+    runnerStepCounter.textContent = `Step ${runnerCurrentIndex + 1} of ${runnerSteps.length}`;
+    runnerProgressBar.style.width = `${Math.round(((runnerCurrentIndex + 1) / runnerSteps.length) * 100)}%`;
+
+    runnerPrevBtn.disabled = runnerCurrentIndex === 0;
+    runnerNextBtn.textContent = runnerCurrentIndex === runnerSteps.length - 1 ? 'Finish ✓' : 'Next Step →';
+
+    // 2. Render Stage Content by Step Type
+    runnerStage.innerHTML = '';
+    runnerFooterCenter.innerHTML = '';
+
+    if (step.type === 'prepare') {
+      renderPrepareStep(step);
+    } else if (step.type === 'rest') {
+      renderRestStep(step);
+    } else if (step.type === 'exercise') {
+      renderExerciseStep(step);
+    } else if (step.type === 'cooldown') {
+      renderCooldownStep(step);
+    }
+  }
+
+  // Touch Swipe Gesture Listener on Stage
+  if (runnerStage) {
+    let tStartX = 0;
+    let tStartY = 0;
+    runnerStage.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        tStartX = e.touches[0].clientX;
+        tStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    runnerStage.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 1) {
+        const dx = e.changedTouches[0].clientX - tStartX;
+        const dy = e.changedTouches[0].clientY - tStartY;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          if (dx < 0) {
+            goToNextRunnerStep(); // Swipe Left -> Next
+          } else {
+            goToPrevRunnerStep(); // Swipe Right -> Prev
+          }
+        }
+      }
+    }, { passive: true });
+  }
+
+  // Keyboard navigation for TV remote / Desktop
+  window.addEventListener('keydown', (e) => {
+    if (runnerOverlay && runnerOverlay.style.display !== 'none') {
+      if (e.key === 'ArrowRight' || e.key === 'Enter') {
+        goToNextRunnerStep();
+      } else if (e.key === 'ArrowLeft') {
+        goToPrevRunnerStep();
+      } else if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        const pauseBtn = document.getElementById('runnerTimerPauseBtn');
+        if (pauseBtn) toggleTimerPause(pauseBtn);
+      } else if (e.key === 'Escape') {
+        exitCircuitRunner();
+      }
+    }
+  });
+
   // --- STRUCTURED CIRCUITS RENDERER (DIRECT IDS & METADATA) ---
   function renderStructuredCircuits(circuits, container) {
     container.innerHTML = '';
@@ -1495,16 +2097,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       // Cooldown poses & dock callout
-      if (c.isCooldown && c.cooldownPoses && c.cooldownPoses.length > 0) {
-        const posesDiv = document.createElement('div');
-        posesDiv.className = 'cooldown-poses-card';
-        posesDiv.innerHTML = `
-          <div class="cooldown-poses-title">🧘 Poses in this Guided Flow:</div>
-          <div class="cooldown-poses-list">
-            ${c.cooldownPoses.map(p => `<span class="cooldown-pose-chip">${cleanText(p)}</span>`).join('')}
-          </div>
-        `;
-        block.appendChild(posesDiv);
+      if (c.isCooldown) {
+        if (c.cooldownPoses && c.cooldownPoses.length > 0) {
+          const posesDiv = document.createElement('div');
+          posesDiv.className = 'cooldown-poses-card';
+          posesDiv.innerHTML = `
+            <div class="cooldown-poses-title">🧘 Poses in this Guided Flow:</div>
+            <div class="cooldown-poses-list">
+              ${c.cooldownPoses.map(p => `<span class="cooldown-pose-chip">${cleanText(p)}</span>`).join('')}
+            </div>
+          `;
+          block.appendChild(posesDiv);
+        }
 
         const dockNotice = document.createElement('div');
         dockNotice.className = 'cooldown-dock-banner';
@@ -1513,6 +2117,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           <p>Follow along with the coach in the video below to stretch and conclude your session.</p>
         `;
         block.appendChild(dockNotice);
+
+        const cooldownMount = document.createElement('div');
+        cooldownMount.id = 'cooldownVideoAnchor';
+        cooldownMount.className = 'cooldown-video-mount';
+        block.appendChild(cooldownMount);
       }
 
       // Exercise List

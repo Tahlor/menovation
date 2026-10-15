@@ -161,7 +161,27 @@ assert(appJs.includes('circuit-coaching-tip'), 'app.js renders circuit-coaching-
 assert(appJs.includes('circuit-exercise-check-btn'), 'app.js renders circuit-exercise-check-btn');
 assert(!appJs.includes("Replay ▶' : 'Start ▶'"), 'Old "Start ▶" action pill completely replaced');
 
+assert(appJs.includes('openCircuitRunner'), 'app.js defines openCircuitRunner');
+assert(appJs.includes('startCircuitRunnerBtn'), 'app.js binds startCircuitRunnerBtn');
+assert(appJs.includes('runnerAutoAdvance'), 'app.js supports auto-advance toggle state');
+assert(appJs.includes('playRunnerChime'), 'app.js synthesizes offline countdown chimes');
+assert(appJs.includes('touchstart'), 'app.js binds touchstart for swipe gestures');
+assert(appJs.includes('touchend'), 'app.js binds touchend for swipe gestures');
+assert(appJs.includes('cooldownVideoAnchor'), 'app.js anchors cooldown video directly inside Part 7');
+assert(appJs.includes('topVideoAnchor'), 'app.js anchors full-length video at top');
+
 assert(indexHtml.includes('id="playerWorkoutFormatNotice"'), 'index.html has playerWorkoutFormatNotice container');
+assert(indexHtml.includes('id="startCircuitRunnerBtn"'), 'index.html has startCircuitRunnerBtn in title bar');
+assert(indexHtml.includes('id="topVideoAnchor"'), 'index.html has topVideoAnchor');
+assert(indexHtml.includes('id="circuitRunnerOverlay"'), 'index.html has circuitRunnerOverlay');
+assert(indexHtml.includes('id="runnerAutoAdvanceToggle"'), 'index.html has runnerAutoAdvanceToggle');
+assert(indexHtml.includes('id="circuitRunnerStage"'), 'index.html has circuitRunnerStage for swipeable cards');
+assert(indexHtml.includes('id="playerControlsBar"'), 'index.html has playerControlsBar id');
+assert(indexHtml.includes('css/app.css?v=13'), 'index.html includes css with v=13 cache busting');
+assert(indexHtml.includes('js/app.js?v=13'), 'index.html includes app.js with v=13 cache busting');
+
+const swJs = fs.readFileSync(path.join(APP_DIR, 'sw.js'), 'utf-8');
+assert(swJs.includes("const CACHE_NAME = 'menovation-offline-v13';"), 'sw.js uses CACHE_NAME v13 for clean cache eviction');
 
 assert(appCss.includes('.workout-action-group'), 'app.css styles .workout-action-group');
 assert(appCss.includes('.workout-preview-btn'), 'app.css styles .workout-preview-btn');
@@ -173,6 +193,13 @@ assert(appCss.includes('#viewWorkoutPlayer.is-circuit-workout'), 'app.css config
 assert(appCss.includes('.circuit-coaching-tip'), 'app.css styles .circuit-coaching-tip');
 assert(appCss.includes('.circuit-exercise-check-btn'), 'app.css styles .circuit-exercise-check-btn');
 assert(appCss.includes('.cooldown-dock-banner'), 'app.css styles .cooldown-dock-banner');
+assert(appCss.includes('#topVideoAnchor:empty'), 'app.css hides empty topVideoAnchor');
+assert(appCss.includes('.cooldown-video-mount'), 'app.css styles cooldown-video-mount');
+assert(appCss.includes('.circuit-runner-overlay'), 'app.css styles circuit-runner-overlay');
+assert(appCss.includes('.circuit-runner-stage'), 'app.css styles circuit-runner-stage');
+assert(appCss.includes('.runner-card'), 'app.css styles runner-card');
+assert(appCss.includes('.runner-timer-box'), 'app.css styles runner-timer-box');
+assert(appCss.includes('.btn-circuit-mode'), 'app.css styles btn-circuit-mode');
 
 console.log('\n====================================================');
 console.log(`TOTAL: ${passed} PASSED, ${failed} FAILED`);

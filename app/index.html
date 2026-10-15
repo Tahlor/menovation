@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="assets/images/menovation-sq-purple-300.png">
   
   <!-- App Stylesheet -->
-  <link rel="stylesheet" href="css/app.css?v=11">
+  <link rel="stylesheet" href="css/app.css?v=13">
 </head>
 <body>
 
@@ -126,8 +126,10 @@
       </button>
 
       <div class="workout-player-container">
-        <!-- Video Player Wrapper -->
-        <div class="video-wrapper" id="workoutVideoWrapper">
+        <!-- Top Video Anchor (Holds Video Player for Full Video Classes) -->
+        <div id="topVideoAnchor">
+          <!-- Video Player Wrapper -->
+          <div class="video-wrapper" id="workoutVideoWrapper">
           <!-- Mini-Player Header (visible in mini-player popout mode) -->
           <div class="mini-player-header" id="miniPlayerHeader" style="display: none;" title="Drag to reposition">
             <div class="mini-player-drag-handle" aria-hidden="true" title="Drag to reposition">
@@ -220,7 +222,7 @@
         </div>
 
         <!-- Video Player Quick Controls Bar -->
-        <div class="player-controls-bar">
+        <div class="player-controls-bar" id="playerControlsBar">
           <div class="speed-selector">
             <label>Speed:</label>
             <button class="speed-pill" data-speed="0.75">0.75x</button>
@@ -236,6 +238,7 @@
             <button class="btn btn-sm btn-primary" id="fullscreenBtn">Fullscreen ⛶</button>
           </div>
         </div>
+      </div>
 
         <!-- Workout Header & Completion -->
         <div class="workout-header-card">
@@ -244,9 +247,14 @@
               <span class="badge badge-purple" id="playerProgramBadge">Program</span>
               <h1 id="playerWorkoutTitle" class="workout-player-title">Workout Title</h1>
             </div>
-            <button class="btn btn-success btn-complete-workout" id="markCompleteBtn">
-              ✓ Mark Complete
-            </button>
+            <div class="workout-title-actions">
+              <button class="btn btn-primary btn-circuit-mode" id="startCircuitRunnerBtn" style="display: none;">
+                ⚡ Start Circuit Mode &rarr;
+              </button>
+              <button class="btn btn-success btn-complete-workout" id="markCompleteBtn">
+                ✓ Mark Complete
+              </button>
+            </div>
           </div>
 
           <div class="workout-meta-chips" id="playerMetaChips">
@@ -279,6 +287,61 @@
         </div>
       </div>
     </section>
+
+    <!-- ========================================== -->
+    <!-- INTERACTIVE CIRCUIT MODE RUNNER OVERLAY    -->
+    <!-- ========================================== -->
+    <div id="circuitRunnerOverlay" class="circuit-runner-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="Interactive Circuit Runner">
+      <!-- Runner Top Header Bar -->
+      <div class="circuit-runner-top-bar">
+        <div class="circuit-runner-top-left">
+          <button class="btn btn-sm btn-secondary circuit-runner-exit-btn" id="circuitRunnerExitBtn">
+            &larr; Exit to Overview
+          </button>
+          <div class="circuit-runner-breadcrumbs">
+            <span class="circuit-runner-workout-name" id="runnerWorkoutName">Workout</span>
+            <span class="circuit-runner-sep">&bull;</span>
+            <span class="circuit-runner-part-name" id="runnerPartName">Part 1</span>
+          </div>
+        </div>
+        
+        <div class="circuit-runner-top-center">
+          <div class="circuit-runner-step-text" id="runnerStepCounter">Step 1 of 24</div>
+          <div class="circuit-runner-progress-track">
+            <div class="circuit-runner-progress-bar" id="runnerProgressBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="circuit-runner-top-right">
+          <button class="circuit-runner-toggle-pill active" id="runnerAutoAdvanceToggle" title="Toggle automatic timer advance">
+            ⏱️ Auto-Advance: <strong id="runnerAutoAdvanceState">ON</strong>
+          </button>
+          <button class="circuit-runner-sound-btn active" id="runnerSoundToggleBtn" title="Toggle audio cues" aria-label="Sound Toggle">
+            🔔
+          </button>
+        </div>
+      </div>
+
+      <!-- Runner Main Stage Card -->
+      <div class="circuit-runner-stage" id="circuitRunnerStage">
+        <!-- Rendered dynamically by step -->
+      </div>
+
+      <!-- Runner Bottom Controls -->
+      <div class="circuit-runner-footer">
+        <button class="btn btn-secondary circuit-runner-nav-btn" id="runnerPrevBtn" title="Previous step (Left Arrow or Swipe Right)">
+          &larr; Previous
+        </button>
+        
+        <div class="circuit-runner-footer-center" id="runnerFooterCenter">
+          <!-- Dynamic center action -->
+        </div>
+
+        <button class="btn btn-primary circuit-runner-nav-btn" id="runnerNextBtn" title="Next step (Right Arrow or Swipe Left)">
+          Next Step &rarr;
+        </button>
+      </div>
+    </div>
 
     <!-- ========================================== -->
     <!-- VIEW 4: ALL WORKOUTS SEARCH & BROWSE       -->
@@ -547,9 +610,9 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="js/db.js?v=11"></script>
-  <script src="js/app.js?v=11"></script>
-  <script src="js/tv.js?v=11"></script>
+  <script src="js/db.js?v=13"></script>
+  <script src="js/app.js?v=13"></script>
+  <script src="js/tv.js?v=13"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
