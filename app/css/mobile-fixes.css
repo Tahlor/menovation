@@ -412,3 +412,13 @@
     height: 30px;
   }
 }
+
+/* Avoid a long Settings action forcing the mobile dialog wider than the phone. */
+@media (max-width: 600px) {
+  .modal-settings .btn.btn-secondary.btn-sm {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+}
