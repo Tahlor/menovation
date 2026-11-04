@@ -340,7 +340,7 @@ h1, h2, h3, .font-serif {
 /* Cards & Grid */
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 1.5rem;
 }
 
@@ -511,7 +511,7 @@ input[type="range"] {
   background-color: var(--mvn-purple-dark);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: sticky;
-  top: 60px;
+  top: 70px;
   z-index: 90;
 }
 
@@ -615,7 +615,7 @@ input[type="range"] {
 /* Programs Grid */
 .programs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 1.5rem;
 }
 
@@ -1876,7 +1876,7 @@ input[type="range"] {
 
 .workouts-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 1rem;
 }
 
@@ -2200,7 +2200,7 @@ input[type="range"] {
 /* ========================================================================== */
 .exercise-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: 1rem;
 }
 
@@ -3109,7 +3109,7 @@ input[type="range"] {
 
 .perf-logged-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 0.65rem;
   margin-top: 0.85rem;
 }
@@ -3766,3 +3766,274 @@ input[type="range"] {
 }
 
 
+
+/* ========================================================================== */
+/* MOBILE LAYOUT SAFETY: verified at 320, 360, 390, 430 and 768px             */
+/* ========================================================================== */
+
+/* Flex children must be allowed to shrink before their contents can wrap. */
+.app-header .brand-wrapper,
+.header-right-tools,
+.app-view,
+.program-hero-content,
+.workout-item-text,
+.server-option-text,
+.runner-details-column,
+.perf-ex-left,
+.perf-ex-controls {
+  min-width: 0;
+}
+
+.brand-logo {
+  max-width: 100%;
+}
+
+.server-status-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* URLs, filenames and exercise labels can otherwise escape their cards. */
+.server-option-text {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.server-option-text span,
+.server-option-text strong,
+.test-result-message,
+.workout-item-subtitle,
+.perf-ex-title,
+.perf-ex-target {
+  overflow-wrap: anywhere;
+}
+
+.server-option-text span {
+  display: block;
+}
+
+.server-option input[type="radio"] {
+  flex-shrink: 0;
+}
+
+.server-option .form-control {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .app-header {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    min-height: 62px;
+  }
+
+  .header-right-tools {
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .server-status-pill {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.55rem;
+  }
+
+  .main-tabs-bar {
+    top: 62px;
+  }
+
+  .tabs-scroll-container,
+  .filter-pills-row {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-tab {
+    padding: 0.75rem 0.95rem;
+  }
+
+  .main-container {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .programs-grid,
+  .workouts-cards-grid,
+  .exercise-cards-grid,
+  .perf-logged-grid,
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .program-hero-content {
+    padding: 1.15rem;
+  }
+
+  .program-hero-content h1 {
+    font-size: clamp(1.55rem, 6.5vw, 2rem);
+    overflow-wrap: anywhere;
+  }
+
+  .card,
+  .workout-header-card,
+  .circuits-breakdown-card {
+    padding: 1.1rem;
+  }
+
+  .section-title-bar,
+  .perf-editor-actions,
+  .circuit-exercise-actions-bar {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  .section-title-bar h3 {
+    font-size: 1.2rem;
+  }
+
+  .workout-card,
+  .circuit-block {
+    padding: 1rem;
+  }
+
+  .workout-card-actions,
+  .workout-action-group {
+    min-width: 0;
+  }
+
+  .workout-card-btn {
+    min-width: 0;
+    padding-inline: 0.35rem;
+  }
+
+  .diary-subtabs-row {
+    gap: 0;
+  }
+
+  .diary-subtab-btn {
+    flex: 1 1 50%;
+    min-width: 0;
+    padding: 0.65rem 0.3rem;
+    font-size: 0.87rem;
+    line-height: 1.25;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .perf-ex-left {
+    flex-basis: 100%;
+  }
+
+  .perf-ex-controls,
+  .perf-editor-actions {
+    width: 100%;
+  }
+
+  .perf-note-input {
+    max-width: 100%;
+  }
+
+  .circuit-runner-top-bar {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .circuit-runner-top-left,
+  .circuit-runner-top-right,
+  .circuit-runner-breadcrumbs {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .circuit-runner-workout-name,
+  .circuit-runner-part-name {
+    overflow-wrap: anywhere;
+  }
+
+  .circuit-runner-stage {
+    padding: 0.75rem;
+  }
+
+  .runner-card {
+    min-width: 0;
+    padding: 1rem;
+  }
+
+  .runner-timer-box {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.65rem;
+  }
+
+  .runner-timer-number {
+    min-width: 0;
+  }
+
+  .runner-rest-countdown,
+  .runner-prepare-countdown {
+    font-size: clamp(2.6rem, 12vw, 4rem);
+  }
+
+  .modal-backdrop {
+    padding: 0.65rem;
+  }
+
+  .modal-settings,
+  .modal-exercise-info {
+    padding: 1.15rem;
+  }
+
+  .modal-content {
+    max-width: 100%;
+  }
+
+  .server-option {
+    padding: 0.7rem;
+    gap: 0.6rem;
+  }
+
+  .mini-player-title-text {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-logo {
+    max-height: 32px;
+  }
+
+  .nav-tab {
+    font-size: 0.88rem;
+    padding-inline: 0.75rem;
+  }
+
+  .workout-action-pill {
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+
+  .program-workout-item {
+    gap: 0.45rem;
+  }
+
+  .circuit-exercise-thumb-frame {
+    width: 76px;
+    height: 68px;
+    min-width: 76px;
+  }
+
+  .mini-player-badge,
+  .mini-volume-slider {
+    display: none;
+  }
+
+  .mini-player-controls-bar {
+    padding-inline: 0.45rem;
+  }
+
+  .mini-player-buttons-row {
+    gap: 0.15rem;
+  }
+
+  .mini-ctrl-btn {
+    padding-inline: 0.25rem;
+  }
+}
