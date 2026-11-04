@@ -4,16 +4,18 @@
  * and Network-First for API requests with offline cache fallback.
  */
 
-const CACHE_NAME = 'menovation-offline-v16';
+const CACHE_NAME = 'menovation-offline-v17';
 
 const STATIC_PRECACHE_URLS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './css/app.css',
+  './css/program-discovery.css?v=1',
   './css/mobile-fixes.css?v=1',
   './js/db.js',
   './js/app.js',
+  './js/program-discovery.js?v=1',
   './js/tv.js',
   './assets/images/menovation-wordmark-sand.png',
   './assets/images/menovation-sq-purple-512.png',
